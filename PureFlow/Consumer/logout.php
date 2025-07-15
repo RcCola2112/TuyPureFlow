@@ -6,6 +6,7 @@ if (!isset($_SESSION['consumer_id'])) {
     header('Location: login.php');
     exit;
 }
+
 $user_id = $_SESSION['consumer_id'];
 
 // Fetch cart items
@@ -13,12 +14,11 @@ $stmt = $conn->prepare("SELECT * FROM cart WHERE user_id = ?");
 $stmt->execute([$user_id]);
 $cart_items = $stmt->fetchAll();
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Cart - Tuy PureFlow</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="assets/style.css">
@@ -29,8 +29,13 @@ $cart_items = $stmt->fetchAll();
     <div class="container mx-auto px-4 py-3 flex justify-between items-center">
       <a href="landing_page.php" class="text-xl font-bold text-blue-600">Tuy PureFlow</a>
       <div class="flex items-center gap-4">
-        <span class="text-sm text-gray-600">Hello, <?= htmlspecialchars($_SESSION['consumer_name']) ?></span>
-        <a href="logout.php" class="text-sm text-gray-600 hover:text-blue-600">Logout</a>
+        <?php if (isset($_SESSION['consumer_id'])): ?>
+          <span class="text-sm text-gray-600">Hello, <?= htmlspecialchars($_SESSION['consumer_name']) ?></span>
+          <a href="logout.php" class="text-sm text-gray-600 hover:text-blue-600">Logout</a>
+        <?php else: ?>
+          <a href="login.php" class="text-sm text-gray-600 hover:text-blue-600">Login</a>
+          <a href="signup.php" class="text-sm text-gray-600 hover:text-blue-600">Sign Up</a>
+        <?php endif; ?>
       </div>
     </div>
   </header>
@@ -39,8 +44,8 @@ $cart_items = $stmt->fetchAll();
   <main class="container mx-auto px-4 py-8">
     <h1 class="text-2xl font-bold mb-6">My Cart</h1>
 
-    <form method="POST" action="confirm_order.php" id="cartForm">
-      <div class="bg-white rounded-lg shadow p-6">
+    <form method="POST" action="checkout.php" id="checkoutForm">
+      <div class="bg-white rounded-lg shadow p-6 overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
             <tr class="border-b">
@@ -59,25 +64,25 @@ $cart_items = $stmt->fetchAll();
             <?php foreach ($cart_items as $item): ?>
             <tr class="border-b">
               <td class="text-center">
-                <input type="checkbox" name="selected_items[]" value="<?= $item['cart_id'] ?>" class="item-checkbox" />
+                <input type="checkbox" class="item-checkbox" name="cart_ids[]" value="<?= $item['cart_id'] ?>" />
               </td>
               <td class="py-3"><?= htmlspecialchars($item['product_name']) ?></td>
               <td class="text-center"><?= htmlspecialchars($item['type']) ?></td>
               <td class="text-center">
-                <input type="number" name="qty[<?= $item['cart_id'] ?>]" value="<?= $item['qty'] ?>" min="1" class="w-12 text-center border rounded">
+                <input type="number" name="qty[<?= $item['cart_id'] ?>]" value="<?= $item['qty'] ?>" min="1" class="w-12 text-center border rounded" />
               </td>
               <td class="text-center">₱<?= number_format($item['price'], 2) ?></td>
               <td class="text-center">₱<?= number_format($item['qty'] * $item['price'], 2) ?></td>
               <td class="text-center">
-                <a href="remove_cart_item.php?cart_id=<?= $item['cart_id'] ?>" class="text-red-500 hover:underline">Remove</a>
+                <a href="remove_item.php?id=<?= $item['cart_id'] ?>" class="text-red-500 hover:underline">Remove</a>
               </td>
             </tr>
             <?php endforeach; ?>
           </tbody>
         </table>
 
-        <!-- Summary Section -->
-        <div class="mt-6 flex justify-end hidden" id="summarySection">
+        <!-- Summary -->
+        <div id="summarySection" class="mt-6 flex justify-end hidden">
           <div class="w-full max-w-md bg-gray-50 p-4 rounded-lg border">
             <h2 class="text-lg font-semibold mb-3">Order Summary</h2>
             <div class="flex justify-between text-sm mb-2">
@@ -86,68 +91,67 @@ $cart_items = $stmt->fetchAll();
             </div>
             <div class="flex justify-between text-sm mb-2">
               <span>Delivery Fee</span>
-              <span>₱15.00</span>
+              <span id="deliveryFee">₱15.00</span>
             </div>
             <div class="flex justify-between text-base font-bold border-t pt-2">
               <span>Total</span>
-              <span id="total">₱15.00</span>
+              <span id="total">₱0.00</span>
             </div>
-            <button type="submit" class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg">Proceed to Checkout</button>
+            <button type="submit" class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg">
+              Proceed to Checkout
+            </button>
           </div>
         </div>
       </div>
     </form>
   </main>
 
+  <!-- Footer -->
   <footer class="mt-10 py-6 text-center text-gray-500 text-sm">
     &copy; 2025 Tuy PureFlow. All rights reserved.
   </footer>
 
   <script>
     const checkboxes = document.querySelectorAll('.item-checkbox');
-    const summary = document.getElementById('summarySection');
-    const subtotalEl = document.getElementById('subtotal');
-    const totalEl = document.getElementById('total');
-    const selectAll = document.getElementById('selectAll');
-
-    const cartData = <?= json_encode($cart_items) ?>;
+    const summarySection = document.getElementById('summarySection');
+    const subtotalSpan = document.getElementById('subtotal');
+    const totalSpan = document.getElementById('total');
+    const deliveryFee = 15;
 
     function updateSummary() {
       let subtotal = 0;
-      let selected = 0;
+      let anyChecked = false;
 
-      checkboxes.forEach((box, index) => {
-        if (box.checked) {
-          const id = box.value;
-          const qtyInput = document.querySelector(`input[name="qty[${id}]"]`);
-          const qty = parseInt(qtyInput.value) || 0;
-          const item = cartData.find(i => i.cart_id == id);
-          subtotal += item.price * qty;
-          selected++;
+      checkboxes.forEach(cb => {
+        if (cb.checked) {
+          anyChecked = true;
+          const row = cb.closest('tr');
+          const qty = parseInt(row.querySelector('input[type="number"]').value);
+          const price = parseFloat(row.children[4].textContent.replace('₱', ''));
+          subtotal += qty * price;
         }
       });
 
-      if (selected > 0) {
-        summary.classList.remove('hidden');
-        subtotalEl.innerText = `₱${subtotal.toFixed(2)}`;
-        totalEl.innerText = `₱${(subtotal + 15).toFixed(2)}`;
+      if (anyChecked) {
+        summarySection.classList.remove('hidden');
+        subtotalSpan.textContent = `₱${subtotal.toFixed(2)}`;
+        totalSpan.textContent = `₱${(subtotal + deliveryFee).toFixed(2)}`;
       } else {
-        summary.classList.add('hidden');
+        summarySection.classList.add('hidden');
+        subtotalSpan.textContent = '₱0.00';
+        totalSpan.textContent = '₱0.00';
       }
     }
 
-    checkboxes.forEach(box => {
-      box.addEventListener('change', updateSummary);
-    });
-
-    document.querySelectorAll('input[type="number"]').forEach(input => {
-      input.addEventListener('input', updateSummary);
-    });
-
-    selectAll.addEventListener('change', function () {
-      checkboxes.forEach(cb => cb.checked = this.checked);
+    checkboxes.forEach(cb => cb.addEventListener('change', updateSummary));
+    document.querySelectorAll('input[type="number"]').forEach(input => input.addEventListener('input', updateSummary));
+    document.getElementById('selectAll').addEventListener('change', e => {
+      checkboxes.forEach(cb => cb.checked = e.target.checked);
       updateSummary();
     });
+
+    // Initial call in case some checkboxes are pre-checked
+    updateSummary();
   </script>
 </body>
 </html>

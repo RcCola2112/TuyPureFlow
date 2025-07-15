@@ -1,18 +1,19 @@
 <?php
 // shop_page.php
+session_start();
 include '../db.php';
 
-// Get station_id from URL
-$station_id = isset($_GET['station_id']) ? intval($_GET['station_id']) : 0;
+// Get shop_id from URL
+$shop_id = isset($_GET['shop_id']) ? intval($_GET['shop_id']) : 0;
 
-// Fetch station info
-$stmt = $conn->prepare("SELECT * FROM stations WHERE id = ?");
-$stmt->execute([$station_id]);
+// Fetch shop info
+$stmt = $conn->prepare("SELECT * FROM shop WHERE shop_id = ?");
+$stmt->execute([$shop_id]);
 $station = $stmt->fetch();
 
-// Fetch products for this station
-$stmt = $conn->prepare("SELECT * FROM products WHERE station_id = ?");
-$stmt->execute([$station_id]);
+// Fetch containers for this shop
+$stmt = $conn->prepare("SELECT * FROM container WHERE shop_id = ?");
+$stmt->execute([$shop_id]);
 $products = $stmt->fetchAll();
 ?>
 <!DOCTYPE html>
@@ -31,14 +32,30 @@ $products = $stmt->fetchAll();
       <a href="landing_page.php" class="text-xl font-bold text-blue-600">Tuy PureFlow</a>
       <input type="text" placeholder="Search containers..." class="hidden md:block px-4 py-2 border rounded-full w-1/3 focus:outline-none focus:ring-2 focus:ring-blue-500" />
       <div class="flex items-center gap-4">
-        <a href="#" class="relative">
+        <?php
+          // Show cart icon and pending count for logged in users
+          $pending_count = 0;
+          if (isset($_SESSION['consumer_id'])) {
+              $cart_stmt = $conn->prepare("SELECT COUNT(*) FROM cart WHERE user_id = ?");
+              $cart_stmt->execute([$_SESSION['consumer_id']]);
+              $pending_count = $cart_stmt->fetchColumn();
+          }
+        ?>
+        <a href="cart.php" class="relative">
           <svg class="w-6 h-6 text-gray-600 hover:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13l-1.5 6h13l-1.5-6M7 13H5.4M16 21a2 2 0 100-4 2 2 0 000 4zm-8 0a2 2 0 100-4 2 2 0 000 4z"></path>
           </svg>
-          <span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">2</span>
+          <?php if ($pending_count > 0): ?>
+            <span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full"><?= $pending_count ?></span>
+          <?php endif; ?>
         </a>
-        <a href="#" class="text-sm text-gray-600 hover:text-blue-600">Login</a>
-        <a href="#" class="text-sm text-gray-600 hover:text-blue-600">Sign Up</a>
+        <?php if (isset($_SESSION['consumer_id'])): ?>
+          <span class="text-sm text-gray-600">Hello, <?= htmlspecialchars($_SESSION['consumer_name']) ?></span>
+          <a href="logout.php" class="text-sm text-gray-600 hover:text-blue-600">Logout</a>
+        <?php else: ?>
+          <a href="login.php" class="text-sm text-gray-600 hover:text-blue-600">Login</a>
+          <a href="signup.php" class="text-sm text-gray-600 hover:text-blue-600">Sign Up</a>
+        <?php endif; ?>
       </div>
     </div>
   </header>
@@ -78,27 +95,36 @@ $products = $stmt->fetchAll();
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       <?php foreach ($products as $product): ?>
       <div class="bg-white p-4 rounded-lg shadow hover:shadow-md">
-        <img src="<?= htmlspecialchars($product['image_url'] ?? 'https://via.placeholder.com/300x150') ?>" alt="<?= htmlspecialchars($product['name']) ?>" class="w-full h-32 object-cover rounded">
-        <h3 class="text-md font-semibold mt-3"><?= htmlspecialchars($product['name']) ?></h3>
-        <p class="text-gray-600 text-sm">₱<?= number_format($product['price'], 2) ?></p>
-        <p class="text-gray-500 text-xs">In Stock: <?= htmlspecialchars($product['stock']) ?></p>
-        <div class="flex flex-col gap-2 mt-3">
-          <div class="flex items-center gap-2">
-            <label for="qty<?= $product['id'] ?>" class="text-sm">Qty:</label>
-            <input id="qty<?= $product['id'] ?>" type="number" min="1" max="<?= $product['stock'] ?>" value="1" class="w-16 text-center border rounded py-1">
+        <form method="POST" action="cart.php">
+          <input type="hidden" name="shop_id" value="<?= $shop_id ?>">
+          <input type="hidden" name="container_id" value="<?= $product['container_id'] ?>">
+          <input type="hidden" name="name" value="<?= htmlspecialchars($product['name'] ?? 'Container') ?>">
+          <input type="hidden" name="price" value="<?= $product['price'] ?? 0 ?>">
+          <img src="<?= htmlspecialchars($product['image_url'] ?? 'https://via.placeholder.com/300x150') ?>" alt="<?= htmlspecialchars($product['name'] ?? 'Container') ?>" class="w-full h-32 object-cover rounded">
+          <h3 class="text-md font-semibold mt-3"><?= htmlspecialchars($product['name'] ?? 'Container') ?></h3>
+          <p class="text-gray-600 text-sm">₱<?= isset($product['price']) ? number_format($product['price'], 2) : 'N/A' ?></p>
+          <p class="text-gray-500 text-xs">In Stock: <?= htmlspecialchars($product['stock'] ?? 'N/A') ?></p>
+          <div class="flex flex-col gap-2 mt-3">
+            <div class="flex items-center gap-2">
+              <label for="qty<?= $product['container_id'] ?>" class="text-sm">Qty:</label>
+              <?php
+                $max_stock = (isset($product['stock']) && $product['stock'] > 0) ? intval($product['stock']) : 99;
+              ?>
+              <input id="qty<?= $product['container_id'] ?>" name="qty" type="number" min="1" max="<?= $max_stock ?>" value="1" class="w-16 text-center border rounded py-1">
+            </div>
+            <div class="flex items-center gap-2">
+              <label for="option<?= $product['container_id'] ?>" class="text-sm">Option:</label>
+              <select id="option<?= $product['container_id'] ?>" name="option" class="border rounded py-1 px-2 text-sm">
+                <option value="with-container">With Container</option>
+                <option value="refill-only">Refill Only</option>
+              </select>
+            </div>
           </div>
-          <div class="flex items-center gap-2">
-            <label for="option<?= $product['id'] ?>" class="text-sm">Option:</label>
-            <select id="option<?= $product['id'] ?>" class="border rounded py-1 px-2 text-sm">
-              <option value="with-container">With Container</option>
-              <option value="refill-only">Refill Only</option>
-            </select>
+          <div class="flex gap-2 mt-3">
+            <button type="submit" name="add_to_cart" class="w-1/2 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg">Add to Cart</button>
+            <button type="submit" name="buy_now" class="w-1/2 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg">Buy Now</button>
           </div>
-        </div>
-        <div class="flex gap-2 mt-3">
-          <button class="w-1/2 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg">Add to Cart</button>
-          <button class="w-1/2 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg">Buy Now</button>
-        </div>
+        </form>
       </div>
       <?php endforeach; ?>
     </div>
@@ -110,3 +136,4 @@ $products = $stmt->fetchAll();
   </footer>
 </body>
 </html>
+?>
