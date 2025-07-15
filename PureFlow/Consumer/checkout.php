@@ -1,5 +1,22 @@
 <?php
 // checkout.php
+include '../db.php'; // Adjust path if needed
+
+// For demonstration, assuming user_id is 1
+$user_id = 1;
+
+// Fetch cart items for the user
+$stmt = $conn->prepare("SELECT * FROM cart WHERE user_id = ?");
+$stmt->execute([$user_id]);
+$cart_items = $stmt->fetchAll();
+
+// Calculate subtotal
+$subtotal = 0;
+foreach ($cart_items as $item) {
+    $subtotal += $item['qty'] * $item['price'];
+}
+$delivery_fee = 15.00;
+$total = $subtotal + $delivery_fee;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -52,26 +69,24 @@
       <div class="bg-white p-6 rounded-lg shadow">
         <h2 class="text-lg font-semibold mb-4">Order Summary</h2>
         <ul class="text-sm divide-y">
+          <?php foreach ($cart_items as $item): ?>
           <li class="flex justify-between py-2">
-            <span>5 Gallon Container x2</span>
-            <span>₱60.00</span>
+            <span><?= htmlspecialchars($item['product_name']) ?> x<?= $item['qty'] ?></span>
+            <span>₱<?= number_format($item['qty'] * $item['price'], 2) ?></span>
           </li>
-          <li class="flex justify-between py-2">
-            <span>3 Gallon Refill x1</span>
-            <span>₱25.00</span>
-          </li>
+          <?php endforeach; ?>
         </ul>
         <div class="flex justify-between font-medium text-sm mt-4">
           <span>Subtotal</span>
-          <span>₱85.00</span>
+          <span>₱<?= number_format($subtotal, 2) ?></span>
         </div>
         <div class="flex justify-between font-medium text-sm">
           <span>Delivery Fee</span>
-          <span>₱15.00</span>
+          <span>₱<?= number_format($delivery_fee, 2) ?></span>
         </div>
         <div class="flex justify-between font-bold text-base border-t pt-3 mt-3">
           <span>Total</span>
-          <span>₱100.00</span>
+          <span>₱<?= number_format($total, 2) ?></span>
         </div>
         <button class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg">Place Order</button>
       </div>

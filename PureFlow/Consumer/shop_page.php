@@ -1,12 +1,26 @@
 <?php
 // shop_page.php
+include '../db.php';
+
+// Get station_id from URL
+$station_id = isset($_GET['station_id']) ? intval($_GET['station_id']) : 0;
+
+// Fetch station info
+$stmt = $conn->prepare("SELECT * FROM stations WHERE id = ?");
+$stmt->execute([$station_id]);
+$station = $stmt->fetch();
+
+// Fetch products for this station
+$stmt = $conn->prepare("SELECT * FROM products WHERE station_id = ?");
+$stmt->execute([$station_id]);
+$products = $stmt->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Shop - Tuy PureFlow</title>
+  <title><?= htmlspecialchars($station['name'] ?? 'Shop') ?> - Tuy PureFlow</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="assets/style.css">
 </head>
@@ -18,7 +32,7 @@
       <input type="text" placeholder="Search containers..." class="hidden md:block px-4 py-2 border rounded-full w-1/3 focus:outline-none focus:ring-2 focus:ring-blue-500" />
       <div class="flex items-center gap-4">
         <a href="#" class="relative">
-          <svg class="w-6 h-6 text-gray-600 hover:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <svg class="w-6 h-6 text-gray-600 hover:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13l-1.5 6h13l-1.5-6M7 13H5.4M16 21a2 2 0 100-4 2 2 0 000 4zm-8 0a2 2 0 100-4 2 2 0 000 4z"></path>
           </svg>
           <span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">2</span>
@@ -32,17 +46,24 @@
   <!-- Shop Banner -->
   <section class="bg-white shadow-sm mb-4">
     <div class="container mx-auto px-4 py-6 flex flex-col md:flex-row items-center gap-6">
-      <img src="https://via.placeholder.com/150" class="w-36 h-36 object-cover rounded-full border" alt="Shop Logo">
+      <img src="<?= htmlspecialchars($station['image_url'] ?? 'https://via.placeholder.com/150') ?>" class="w-36 h-36 object-cover rounded-full border" alt="Shop Logo">
       <div class="flex-1">
-        <h1 class="text-2xl font-bold">Dela Cruz Water Station</h1>
-        <p class="text-gray-600 text-sm">Tuy, Batangas</p>
+        <h1 class="text-2xl font-bold"><?= htmlspecialchars($station['name'] ?? 'Shop Not Found') ?></h1>
+        <p class="text-gray-600 text-sm"><?= htmlspecialchars($station['address'] ?? '') ?></p>
         <div class="flex items-center gap-2 mt-1">
-          <span class="text-yellow-500">★★★★☆</span>
-          <span class="text-sm text-gray-500">4.3 (120 reviews)</span>
+          <span class="text-yellow-500">
+            <?php
+              $rating = round($station['rating'] ?? 4);
+              for ($i = 0; $i < 5; $i++) {
+                echo $i < $rating ? '★' : '☆';
+              }
+            ?>
+          </span>
+          <span class="text-sm text-gray-500"><?= number_format($station['rating'] ?? 4.0, 1) ?> (<?= $station['reviews'] ?? 0 ?> reviews)</span>
         </div>
         <div class="mt-2 text-sm text-gray-600">
-          <p>Operating Hours: 08:00 AM - 05:00 PM</p>
-          <p>Contact: 0912-345-6789</p>
+          <p>Operating Hours: <?= htmlspecialchars($station['hours'] ?? '08:00 AM - 05:00 PM') ?></p>
+          <p>Contact: <?= htmlspecialchars($station['contact'] ?? '') ?></p>
         </div>
       </div>
       <div class="mt-4 md:mt-0">
@@ -55,20 +76,20 @@
   <main class="container mx-auto px-4">
     <h2 class="text-lg font-semibold mb-4">Available Containers</h2>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      <!-- Container Card -->
+      <?php foreach ($products as $product): ?>
       <div class="bg-white p-4 rounded-lg shadow hover:shadow-md">
-        <img src="https://via.placeholder.com/300x150" alt="5 Gallon" class="w-full h-32 object-cover rounded">
-        <h3 class="text-md font-semibold mt-3">5 Gallon Container</h3>
-        <p class="text-gray-600 text-sm">₱30.00</p>
-        <p class="text-gray-500 text-xs">In Stock: 25</p>
+        <img src="<?= htmlspecialchars($product['image_url'] ?? 'https://via.placeholder.com/300x150') ?>" alt="<?= htmlspecialchars($product['name']) ?>" class="w-full h-32 object-cover rounded">
+        <h3 class="text-md font-semibold mt-3"><?= htmlspecialchars($product['name']) ?></h3>
+        <p class="text-gray-600 text-sm">₱<?= number_format($product['price'], 2) ?></p>
+        <p class="text-gray-500 text-xs">In Stock: <?= htmlspecialchars($product['stock']) ?></p>
         <div class="flex flex-col gap-2 mt-3">
           <div class="flex items-center gap-2">
-            <label for="qty1" class="text-sm">Qty:</label>
-            <input id="qty1" type="number" min="1" max="25" value="1" class="w-16 text-center border rounded py-1">
+            <label for="qty<?= $product['id'] ?>" class="text-sm">Qty:</label>
+            <input id="qty<?= $product['id'] ?>" type="number" min="1" max="<?= $product['stock'] ?>" value="1" class="w-16 text-center border rounded py-1">
           </div>
           <div class="flex items-center gap-2">
-            <label for="option1" class="text-sm">Option:</label>
-            <select id="option1" class="border rounded py-1 px-2 text-sm">
+            <label for="option<?= $product['id'] ?>" class="text-sm">Option:</label>
+            <select id="option<?= $product['id'] ?>" class="border rounded py-1 px-2 text-sm">
               <option value="with-container">With Container</option>
               <option value="refill-only">Refill Only</option>
             </select>
@@ -79,31 +100,7 @@
           <button class="w-1/2 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg">Buy Now</button>
         </div>
       </div>
-
-      <!-- Example 2 -->
-      <div class="bg-white p-4 rounded-lg shadow hover:shadow-md">
-        <img src="https://via.placeholder.com/300x150" alt="3 Gallon" class="w-full h-32 object-cover rounded">
-        <h3 class="text-md font-semibold mt-3">3 Gallon Container</h3>
-        <p class="text-gray-600 text-sm">₱25.00</p>
-        <p class="text-gray-500 text-xs">In Stock: 10</p>
-        <div class="flex flex-col gap-2 mt-3">
-          <div class="flex items-center gap-2">
-            <label for="qty2" class="text-sm">Qty:</label>
-            <input id="qty2" type="number" min="1" max="10" value="1" class="w-16 text-center border rounded py-1">
-          </div>
-          <div class="flex items-center gap-2">
-            <label for="option2" class="text-sm">Option:</label>
-            <select id="option2" class="border rounded py-1 px-2 text-sm">
-              <option value="with-container">With Container</option>
-              <option value="refill-only">Refill Only</option>
-            </select>
-          </div>
-        </div>
-        <div class="flex gap-2 mt-3">
-          <button class="w-1/2 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg">Add to Cart</button>
-          <button class="w-1/2 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg">Buy Now</button>
-        </div>
-      </div>
+      <?php endforeach; ?>
     </div>
   </main>
 

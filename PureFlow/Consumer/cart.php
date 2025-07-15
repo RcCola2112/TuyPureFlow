@@ -1,5 +1,14 @@
 <?php
 // cart.php
+include '../db.php'; // Adjust path if needed
+
+// For demonstration, assuming user_id is 1
+$user_id = 1;
+
+// Fetch cart items for the user
+$stmt = $conn->prepare("SELECT * FROM cart WHERE user_id = ?");
+$stmt->execute([$user_id]);
+$cart_items = $stmt->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -41,36 +50,23 @@
           </tr>
         </thead>
         <tbody>
+          <?php foreach ($cart_items as $item): ?>
           <tr class="border-b">
             <td class="text-center">
               <input type="checkbox" />
             </td>
-            <td class="py-3">5 Gallon Container</td>
-            <td class="text-center">With Container</td>
+            <td class="py-3"><?= htmlspecialchars($item['product_name']) ?></td>
+            <td class="text-center"><?= htmlspecialchars($item['type']) ?></td>
             <td class="text-center">
-              <input type="number" value="2" min="1" class="w-12 text-center border rounded">
+              <input type="number" value="<?= $item['qty'] ?>" min="1" class="w-12 text-center border rounded">
             </td>
-            <td class="text-center">₱30.00</td>
-            <td class="text-center">₱60.00</td>
-            <td class="text-center">
-              <button class="text-red-500 hover:underline">Remove</button>
-            </td>
-          </tr>
-          <tr class="border-b">
-            <td class="text-center">
-              <input type="checkbox" />
-            </td>
-            <td class="py-3">3 Gallon Container</td>
-            <td class="text-center">Refill Only</td>
-            <td class="text-center">
-              <input type="number" value="1" min="1" class="w-12 text-center border rounded">
-            </td>
-            <td class="text-center">₱25.00</td>
-            <td class="text-center">₱25.00</td>
+            <td class="text-center">₱<?= number_format($item['price'], 2) ?></td>
+            <td class="text-center">₱<?= number_format($item['qty'] * $item['price'], 2) ?></td>
             <td class="text-center">
               <button class="text-red-500 hover:underline">Remove</button>
             </td>
           </tr>
+          <?php endforeach; ?>
         </tbody>
       </table>
 

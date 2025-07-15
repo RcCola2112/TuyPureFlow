@@ -1,5 +1,10 @@
 <?php
 // landing_page.php
+include '../db.php';
+
+// Fetch water stations
+$stmt = $conn->query("SELECT * FROM stations");
+$stations = $stmt->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -35,22 +40,33 @@
   </nav>
   <!-- Shop Grid -->
   <main class="container mx-auto px-4 mt-6 grid gap-6 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-    <!-- Card Example -->
+    <?php foreach ($stations as $station): ?>
     <div class="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition shop-card">
-      <img src="https://via.placeholder.com/300x150" alt="Shop" class="w-full h-36 object-cover" />
+      <img src="<?= htmlspecialchars($station['image_url'] ?? 'https://via.placeholder.com/300x150') ?>" alt="Shop" class="w-full h-36 object-cover" />
       <div class="p-4">
-        <h2 class="text-md font-semibold truncate">Dela Cruz Water Station</h2>
-        <p class="text-gray-500 text-sm truncate">Tuy, Batangas</p>
-        <p class="text-sm mt-1">5 Gallon - ₱30 • 3 Gallon - ₱25</p>
+        <h2 class="text-md font-semibold truncate"><?= htmlspecialchars($station['name']) ?></h2>
+        <p class="text-gray-500 text-sm truncate"><?= htmlspecialchars($station['address']) ?></p>
+        <p class="text-sm mt-1"><?= htmlspecialchars($station['products'] ?? '5 Gallon - ₱30 • 3 Gallon - ₱25') ?></p>
         <div class="flex items-center text-sm mt-1">
-          <span class="text-yellow-500 mr-1">★★★★☆</span>
-          <span class="text-gray-500">4.3 (120)</span>
+          <span class="text-yellow-500 mr-1">
+            <?php
+              $rating = round($station['rating'] ?? 4);
+              for ($i = 0; $i < 5; $i++) {
+                echo $i < $rating ? '★' : '☆';
+              }
+            ?>
+          </span>
+          <span class="text-gray-500"><?= number_format($station['rating'] ?? 4.0, 1) ?> (<?= $station['reviews'] ?? 0 ?>)</span>
         </div>
-        <span class="inline-block mt-2 px-2 py-1 text-xs rounded bg-green-100 text-green-700">Open Now</span>
+        <?php if (($station['is_open'] ?? 1) == 1): ?>
+          <span class="inline-block mt-2 px-2 py-1 text-xs rounded bg-green-100 text-green-700">Open Now</span>
+        <?php else: ?>
+          <span class="inline-block mt-2 px-2 py-1 text-xs rounded bg-red-100 text-red-700">Closed</span>
+        <?php endif; ?>
         <button class="view-button mt-3 w-full py-2 text-center text-white rounded-lg">View Shop</button>
       </div>
     </div>
-    <!-- Repeat for other shops -->
+    <?php endforeach; ?>
   </main>
 
   <!-- Footer -->
