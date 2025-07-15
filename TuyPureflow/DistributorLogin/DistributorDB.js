@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, Dimensions, RefreshControl, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -19,7 +19,19 @@ const infoCards = [
   { label: 'Damaged Container', value: 4, icon: '📦' },
 ];
 
-export default function DistributorDB({ navigation }) {
+export default function DistributorDB({ navigation, route }) {
+  const distributor = route?.params?.distributor;
+  const [shopName, setShopName] = useState('');
+  useEffect(() => {
+    if (distributor?.distributor_id) {
+      fetch(`http://192.168.1.20/pureflowBackend/get_shop_name.php?distributor_id=${distributor.distributor_id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.shop_name) setShopName(data.shop_name);
+        });
+    }
+  }, [distributor]);
+  console.log('Distributor:', distributor);
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = () => {
     setRefreshing(true);
@@ -37,7 +49,7 @@ export default function DistributorDB({ navigation }) {
           >
             <Text style={styles.menuIcon}>☰</Text>
           </TouchableOpacity>
-          <Text style={styles.headerText}>Hello Arciece of JCB</Text>
+          <Text style={styles.headerText}>Hello {distributor?.name || 'Owner'} of {shopName || '...'}</Text>
           <View style={styles.headerRight}>
             <View style={styles.bellWrap}>
               <Text style={styles.bell}>🔔</Text>

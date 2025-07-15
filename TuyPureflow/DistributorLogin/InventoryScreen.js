@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 
-export default function InventoryScreen() {
+export default function InventoryScreen({ route }) {
   const [modalVisible, setModalVisible] = useState(false);
   const [items, setItems] = useState([]);
   const [itemName, setItemName] = useState('');
@@ -26,6 +26,55 @@ export default function InventoryScreen() {
   const [editContainerPrice, setEditContainerPrice] = useState('');
   const [actionLog, setActionLog] = useState([]);
   const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [shopId, setShopId] = useState(null);
+
+  // API Base URL - Change this to your computer's IP address
+  const API_BASE_URL = 'http://192.168.1.20/pureflowBackend'; // Replace with your actual IP address
+
+  const distributor = route?.params?.distributor;
+
+  useEffect(() => {
+    if (distributor && distributor.distributor_id) {
+      // Fetch shop_id for this distributor
+      fetch(`http://192.168.1.20/pureflowBackend/get_shop_id.php?distributor_id=${distributor.distributor_id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.shop_id) setShopId(data.shop_id);
+        });
+    }
+  }, [distributor]);
+
+  useEffect(() => {
+    if (shopId) loadContainers();
+  }, [shopId]);
+
+  const loadContainers = async () => {
+    if (!shopId) return;
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/container.php?shop_id=${shopId}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setContainers(data.containers.map(container => ({
+          id: container.container_id,
+          name: container.Container_Name, // map Container_Name from backend
+          type: container.type,
+          price: parseFloat(container.price),
+          stock: parseInt(container.stock_quantity),
+          damaged: parseInt(container.damaged_quantity)
+        })));
+      } else {
+        setError(data.error || 'Failed to load containers');
+      }
+    } catch (err) {
+      setError('Network error: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAddItem = () => {
     if (itemName && itemQty) {
@@ -59,20 +108,75 @@ export default function InventoryScreen() {
     updateLast();
   };
 
-  const handleAddContainer = () => {
+  const handleAddContainer = async () => {
+    if (!shopId) return;
     if (newContainerName && newContainerPrice !== '' && !isNaN(Number(newContainerPrice))) {
-      setContainers([...containers, { name: newContainerName, type: newContainerType, price: parseFloat(newContainerPrice), stock: 0, damaged: 0 }]);
-      setNewContainerName('');
-      setNewContainerType('Container');
-      setNewContainerPrice('');
-      setContainerModalVisible(false);
-      updateLast();
+      setLoading(true);
+      try {
+        const response = await fetch(`${API_BASE_URL}/container.php`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            shop_id: shopId,
+            Container_Name: newContainerName, // changed from 'name'
+            type: newContainerType,
+            price: parseFloat(newContainerPrice),
+            stock_quantity: 0,
+            damaged_quantity: 0
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          setNewContainerName('');
+          setNewContainerType('Container');
+          setNewContainerPrice('');
+          setContainerModalVisible(false);
+          updateLast();
+          loadContainers(); // Reload containers from database
+        } else {
+          setError(data.error || 'Failed to add container');
+        }
+      } catch (err) {
+        setError('Network error: ' + err.message);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
-  const handleRemoveContainer = (idx) => {
-    setContainers(containers.filter((_, i) => i !== idx));
-    updateLast();
+  const handleRemoveContainer = async (idx) => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/container.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'delete',
+          container_id: containers[idx].id
+        })
+      });
+      const responseText = await response.text();
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        setError('Invalid JSON response from server: ' + responseText);
+        setLoading(false);
+        return;
+      }
+      if (data.success) {
+        updateLast();
+        loadContainers();
+      } else {
+        setError(data.error || 'Failed to delete container');
+      }
+    } catch (err) {
+      setError('Network error: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleEditContainer = (idx) => {
@@ -83,57 +187,129 @@ export default function InventoryScreen() {
     setContainerModalVisible(true);
   };
 
-  const handleSaveContainerEdit = () => {
+  const handleSaveContainerEdit = async () => {
     if (editContainerName && editContainerPrice !== '' && !isNaN(Number(editContainerPrice))) {
-      const updated = [...containers];
-      updated[editContainerIndex].name = editContainerName;
-      updated[editContainerIndex].type = editContainerType;
-      updated[editContainerIndex].price = parseFloat(editContainerPrice);
-      setContainers(updated);
-      setEditContainerIndex(null);
-      setEditContainerName('');
-      setEditContainerType('Container');
-      setEditContainerPrice('');
-      setContainerModalVisible(false);
-      updateLast();
+      setLoading(true);
+      try {
+        const response = await fetch(`${API_BASE_URL}/container.php`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            container_id: containers[editContainerIndex].id,
+            Container_Name: editContainerName, // changed from 'name'
+            type: editContainerType,
+            price: parseFloat(editContainerPrice),
+            stock_quantity: containers[editContainerIndex].stock,
+            damaged_quantity: containers[editContainerIndex].damaged
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          setEditContainerIndex(null);
+          setEditContainerName('');
+          setEditContainerType('Container');
+          setEditContainerPrice('');
+          setContainerModalVisible(false);
+          updateLast();
+          loadContainers(); // Reload containers from database
+        } else {
+          setError(data.error || 'Failed to update container');
+        }
+      } catch (err) {
+        setError('Network error: ' + err.message);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
   // Update stock
-  const handleStockChange = (idx, delta) => {
-    setContainers(prev => {
-      const updated = [...prev];
-      updated[idx].stock = Math.max(0, updated[idx].stock + delta);
-      setActionLog(log => [
-        { type: delta > 0 ? 'Add Stock' : 'Remove Stock', msg: `${delta > 0 ? 'Added' : 'Removed'} ${Math.abs(delta)} to ${updated[idx].name}`, time: new Date() },
-        ...log
-      ]);
-      updateLast();
-      return updated;
-    });
+  const handleStockChange = async (idx, delta) => {
+    const updatedStock = Math.max(0, containers[idx].stock + delta);
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/container.php`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          container_id: containers[idx].id,
+          Container_Name: containers[idx].name, // changed from 'name'
+          type: containers[idx].type,
+          price: containers[idx].price,
+          stock_quantity: updatedStock,
+          damaged_quantity: containers[idx].damaged
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setActionLog(log => [
+          { type: delta > 0 ? 'Add Stock' : 'Remove Stock', msg: `${delta > 0 ? 'Added' : 'Removed'} ${Math.abs(delta)} to ${containers[idx].name}`, time: new Date() },
+          ...log
+        ]);
+        updateLast();
+        loadContainers(); // Reload containers from database
+      } else {
+        setError(data.error || 'Failed to update stock');
+      }
+    } catch (err) {
+      setError('Network error: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Update damaged
-  const handleDamagedChange = (idx, delta) => {
-    setContainers(prev => {
-      const updated = [...prev];
+  const handleDamagedChange = async (idx, delta) => {
+    setLoading(true);
+    try {
+      let updatedStock = containers[idx].stock;
+      let updatedDamaged = containers[idx].damaged;
+      
       if (delta > 0) {
-        updated[idx].damaged = Math.max(0, updated[idx].damaged + delta);
+        updatedDamaged = Math.max(0, updatedDamaged + delta);
         setActionLog(log => [
-          { type: 'Mark Damaged', msg: `Marked ${Math.abs(delta)} as damaged in ${updated[idx].name}`, time: new Date() },
+          { type: 'Mark Damaged', msg: `Marked ${Math.abs(delta)} as damaged in ${containers[idx].name}`, time: new Date() },
           ...log
         ]);
-      } else if (delta < 0 && updated[idx].damaged > 0) {
-        updated[idx].damaged = Math.max(0, updated[idx].damaged + delta);
-        updated[idx].stock = updated[idx].stock + Math.abs(delta); // restore to stock
+      } else if (delta < 0 && updatedDamaged > 0) {
+        updatedDamaged = Math.max(0, updatedDamaged + delta);
+        updatedStock = updatedStock + Math.abs(delta);
         setActionLog(log => [
-          { type: 'Restore', msg: `Restored ${Math.abs(delta)} from damaged to stock in ${updated[idx].name}`, time: new Date() },
+          { type: 'Restore', msg: `Restored ${Math.abs(delta)} from damaged to stock in ${containers[idx].name}`, time: new Date() },
           ...log
         ]);
       }
-      updateLast();
-      return updated;
-    });
+      
+      const response = await fetch(`${API_BASE_URL}/container.php`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          container_id: containers[idx].id,
+          Container_Name: containers[idx].name, // changed from 'name'
+          type: containers[idx].type,
+          price: containers[idx].price,
+          stock_quantity: updatedStock,
+          damaged_quantity: updatedDamaged
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        updateLast();
+        loadContainers(); // Reload containers from database
+      } else {
+        setError(data.error || 'Failed to update damaged quantity');
+      }
+    } catch (err) {
+      setError('Network error: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Update lastUpdate on any inventory change
@@ -146,6 +322,21 @@ export default function InventoryScreen() {
         <Text style={styles.lastUpdate}>Last Update: {lastUpdate.toLocaleString()}</Text>
       </LinearGradient>
       <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 40 }}>
+        {error ? (
+          <View style={styles.errorCard}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={() => setError('')}>
+              <Text style={styles.retryButtonText}>Dismiss</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+        
+        {loading ? (
+          <View style={styles.loadingCard}>
+            <Text style={styles.loadingText}>Loading...</Text>
+          </View>
+        ) : null}
+        
         <View style={styles.card}>
           <Text style={styles.sectionHeader}>Container Management</Text>
           <TouchableOpacity style={styles.fullButton} onPress={() => { setEditContainerIndex(null); setContainerModalVisible(true); }}>
@@ -153,7 +344,7 @@ export default function InventoryScreen() {
             <Text style={styles.fullButtonText}>Add Container</Text>
           </TouchableOpacity>
           {containers.map((container, idx) => (
-            <View key={idx} style={styles.itemRow}>
+            <View key={container.id || idx} style={styles.itemRow}>
               <Text style={styles.cardText}>{container.name} <Text style={styles.typeText}>({container.type || 'Container'})</Text>: ₱{container.price?.toFixed(2) || '0.00'} | {container.stock} units <Text style={styles.damagedText}>(Damaged: {container.damaged})</Text></Text>
               <View style={styles.actionRow}>
                 <TouchableOpacity onPress={() => handleStockChange(idx, 1)} style={styles.iconBtn}><Ionicons name="add" size={18} color="#3FE0E8" /></TouchableOpacity>
@@ -169,29 +360,10 @@ export default function InventoryScreen() {
         <View style={styles.card}>
           <Text style={styles.sectionHeader}>Current Stock</Text>
           {containers.map((container, idx) => (
-            <Text key={idx} style={styles.cardText}>• {container.name}: {container.stock} units available</Text>
+            <Text key={container.id || idx} style={styles.cardText}>• {container.name}: {container.stock} units available</Text>
           ))}
           <Text style={styles.cardText}>• Damaged Containers: {containers.reduce((sum, c) => sum + c.damaged, 0)} units</Text>
         </View>
-        <TouchableOpacity style={styles.fullButton} onPress={() => setModalVisible(true)}>
-          <Ionicons name="add-circle" size={22} color="#fff" style={{ marginRight: 8 }} />
-          <Text style={styles.fullButtonText}>Add Item</Text>
-        </TouchableOpacity>
-        {/* List of Added Items */}
-        {items.length > 0 && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Added Items</Text>
-            {items.map((item, idx) => (
-              <View key={idx} style={styles.itemRow}>
-                <Text style={styles.cardText}>• {item.name}: {item.qty} units</Text>
-                <View style={styles.itemActions}>
-                  <TouchableOpacity onPress={() => handleEditItem(idx)} style={styles.actionBtn}><Text style={styles.actionBtnText}>Edit</Text></TouchableOpacity>
-                  <TouchableOpacity onPress={() => handleDeleteItem(idx)} style={[styles.actionBtn, { backgroundColor: '#ff3b30' }]}><Text style={[styles.actionBtnText, { color: '#fff' }]}>Delete</Text></TouchableOpacity>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
       </ScrollView>
       {/* Inventory Action Log */}
       {actionLog.length > 0 && (
@@ -204,74 +376,6 @@ export default function InventoryScreen() {
           </ScrollView>
         </View>
       )}
-      {/* Modal for Adding Item */}
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Add New Item</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Item Name"
-              value={itemName}
-              onChangeText={setItemName}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Quantity"
-              value={itemQty}
-              onChangeText={setItemQty}
-              keyboardType="numeric"
-            />
-            <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.modalButton} onPress={handleAddItem}>
-                <Text style={styles.modalButtonText}>Add</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, { backgroundColor: '#ccc' }]} onPress={() => setModalVisible(false)}>
-                <Text style={[styles.modalButtonText, { color: '#3578C9' }]}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-      {/* Edit Modal */}
-      <Modal
-        visible={editModalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setEditModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Edit Item</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Item Name"
-              value={editName}
-              onChangeText={setEditName}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Quantity"
-              value={editQty}
-              onChangeText={setEditQty}
-              keyboardType="numeric"
-            />
-            <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.modalButton} onPress={handleSaveEdit}>
-                <Text style={styles.modalButtonText}>Save</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, { backgroundColor: '#ccc' }]} onPress={() => setEditModalVisible(false)}>
-                <Text style={[styles.modalButtonText, { color: '#3578C9' }]}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
       {/* Container Modal (Add/Rename) */}
       <Modal
         visible={containerModalVisible}
@@ -555,5 +659,42 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 8,
     gap: 8,
+  },
+  errorCard: {
+    backgroundColor: '#ffebee',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#f44336',
+  },
+  errorText: {
+    color: '#c62828',
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  retryButton: {
+    backgroundColor: '#f44336',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    alignSelf: 'flex-start',
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  loadingCard: {
+    backgroundColor: '#e3f2fd',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#1976d2',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 }); 

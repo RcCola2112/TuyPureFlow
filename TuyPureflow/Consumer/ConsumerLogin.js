@@ -17,7 +17,7 @@ export default function ConsumerLogin({ navigation }) {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('http://192.168.0.191/pureflowBackend/consumer_login.php', {
+      const response = await fetch('http://192.168.1.20/pureflowBackend/consumer_login.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -50,7 +50,7 @@ export default function ConsumerLogin({ navigation }) {
       return;
     }
     try {
-      const response = await fetch('http://192.168.0.191/pureflowBackend/forgot_password.php', {
+      const response = await fetch('http://192.168.1.20/pureflowBackend/forgot_password.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),

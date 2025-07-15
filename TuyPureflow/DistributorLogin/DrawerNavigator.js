@@ -4,12 +4,13 @@ import { DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawe
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function CustomDrawerContent(props) {
+  const { distributor, shopName } = props;
   return (
     <View style={styles.container}>
       <LinearGradient colors={["#3FE0E8", "#3578C9"]} style={styles.header}>
         <Image source={require('../assets/PureLogo.png')} style={styles.logo} resizeMode="contain" />
         <Text style={styles.welcomeText}>Welcome Back!</Text>
-        <Text style={styles.userText}>Arciece of JCB</Text>
+        <Text style={styles.userText}>{distributor?.name || 'Owner'} of {shopName || '...'}</Text>
       </LinearGradient>
       
       <DrawerContentScrollView {...props} style={styles.drawerContent}>

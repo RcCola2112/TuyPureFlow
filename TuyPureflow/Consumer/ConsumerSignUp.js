@@ -76,7 +76,7 @@ export default function ConsumerSignUp({ navigation: propNavigation }) {
     }
 
     try {
-      const response = await fetch('http://192.168.0.191/pureflowBackend/consumer_signup.php', {
+      const response = await fetch('http://192.168.1.20/pureflowBackend/consumer_signup.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

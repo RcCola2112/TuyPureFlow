@@ -10,7 +10,7 @@ const { width } = Dimensions.get('window');
 const CARD_MAX_WIDTH = width > 500 ? 500 : width - 32;
 
 // Set your backend base URL here using your IPv4 address and correct folder
-const API_BASE_URL = 'http://192.168.0.191/pureflowBackend';
+const API_BASE_URL = 'http://192.168.1.20/pureflowBackend';
 
 export default function Login({ navigation }) {
   const [step, setStep] = useState(1);

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from 'react-native';
 
 // Set your backend base URL here
-const BASE_URL = 'http://192.168.0.191/pureflowBackend';
+const BASE_URL = 'http://192.168.1.20/pureflowBackend';
 
 export default function DistributorLoginScreen({ navigation }) {
   const [emailOrPhone, setEmailOrPhone] = useState('');
