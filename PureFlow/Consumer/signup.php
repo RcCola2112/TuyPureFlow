@@ -8,11 +8,12 @@ $success = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = trim($_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
+    $phone = trim($_POST['phone'] ?? '');
     $password = $_POST['password'] ?? '';
     $confirm = $_POST['confirm'] ?? '';
 
     // Basic validation
-    if (!$name || !$email || !$password || !$confirm) {
+    if (!$name || !$email || !$phone || !$password || !$confirm) {
         $error = "All fields are required.";
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = "Invalid email address.";
@@ -27,8 +28,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             // Hash password and insert new consumer
             $hashed = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $conn->prepare("INSERT INTO consumer (name, email, password) VALUES (?, ?, ?)");
-            if ($stmt->execute([$name, $email, $hashed])) {
+            $stmt = $conn->prepare("INSERT INTO consumer (name, email, phone, password) VALUES (?, ?, ?, ?)");
+            if ($stmt->execute([$name, $email, $phone, $hashed])) {
                 $success = "Account created! You can now <a href='login.php' class='text-blue-600 underline'>login</a>.";
             } else {
                 $error = "Registration failed. Please try again.";
@@ -60,6 +61,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="mb-4">
       <label class="block mb-1 text-sm font-medium">Email</label>
       <input type="email" name="email" required class="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" value="<?= htmlspecialchars($_POST['email'] ?? '') ?>">
+    </div>
+    <div class="mb-4">
+      <label class="block mb-1 text-sm font-medium">Phone Number</label>
+      <input type="text" name="phone" required class="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" value="<?= htmlspecialchars($_POST['phone'] ?? '') ?>">
     </div>
     <div class="mb-4">
       <label class="block mb-1 text-sm font-medium">Password</label>

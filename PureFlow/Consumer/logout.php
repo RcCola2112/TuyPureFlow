@@ -1,10 +1,10 @@
 <?php
 session_start();
-include '../db.php';
-
-if (!isset($_SESSION['consumer_id'])) {
-    header('Location: login.php');
-    exit;
+session_unset();
+session_destroy();
+header('Location: login.php');
+exit;
+?>
 }
 
 $user_id = $_SESSION['consumer_id'];

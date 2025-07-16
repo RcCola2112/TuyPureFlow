@@ -45,3 +45,15 @@ if (!function_exists('isActive')) {
     </nav>
   </div>
 </div>
+
+<aside class="fixed top-0 left-0 h-full w-64 bg-white shadow flex flex-col z-40">
+  <div class="px-6 py-4 border-b">
+    <a href="dashboard.php" class="text-xl font-bold text-blue-600 hover:underline">Tuy PureFlow</a>
+  </div>
+  <nav class="flex-1 px-4 py-6 space-y-2">
+    <a href="dashboard.php" class="block px-4 py-2 rounded hover:bg-blue-50 <?= ($currentPage == 'dashboard' ? 'bg-blue-100 text-blue-700 font-bold' : 'text-gray-700') ?>">Dashboard</a>
+    <a href="orders.php" class="block px-4 py-2 rounded hover:bg-blue-50 <?= ($currentPage == 'orders' ? 'bg-blue-100 text-blue-700 font-bold' : 'text-gray-700') ?>">Orders</a>
+    <a href="inventory.php" class="block px-4 py-2 rounded hover:bg-blue-50 <?= ($currentPage == 'inventory' ? 'bg-blue-100 text-blue-700 font-bold' : 'text-gray-700') ?>">Inventory</a>
+    <a href="settings.php" class="block px-4 py-2 rounded hover:bg-blue-50 <?= ($currentPage == 'settings' ? 'bg-blue-100 text-blue-700 font-bold' : 'text-gray-700') ?>">Settings</a>
+  </nav>
+</aside>

@@ -41,11 +41,23 @@ $stations = $stmt->fetchAll();
           <?php endif; ?>
         </a>
         <?php if (isset($_SESSION['consumer_id'])): ?>
-          <span class="text-sm text-gray-600">Hello, <?= htmlspecialchars($_SESSION['consumer_name']) ?></span>
+          <!-- Make username clickable to account.php -->
+          <a href="account.php" class="text-sm text-gray-600 hover:text-blue-600">
+            Hello, <?= htmlspecialchars($_SESSION['consumer_name']) ?>
+          </a>
           <a href="logout.php" class="text-sm text-gray-600 hover:text-blue-600">Logout</a>
         <?php else: ?>
-          <a href="login.php" class="text-sm text-gray-600 hover:text-blue-600">Login</a>
-          <a href="signup.php" class="text-sm text-gray-600 hover:text-blue-600">Sign Up</a>
+          <!-- Account Dropdown Button -->
+          <div class="relative group">
+            <button class="ml-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium flex items-center gap-1 focus:outline-none">
+              Account
+              <span class="transform transition-transform group-hover:rotate-180">▼</span>
+            </button>
+            <div class="absolute right-0 mt-2 w-36 bg-white shadow-lg rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
+              <a href="signup.php" class="block px-4 py-2 text-sm hover:bg-blue-50">Sign Up</a>
+              <a href="login.php" class="block px-4 py-2 text-sm hover:bg-blue-50">Sign In</a>
+            </div>
+          </div>
         <?php endif; ?>
       </div>
     </div>
@@ -96,5 +108,9 @@ $stations = $stmt->fetchAll();
   <footer class="mt-10 py-6 text-center text-gray-500 text-sm">
     &copy; 2025 Tuy PureFlow. All rights reserved.
   </footer>
+
+  <?php if (isset($_SESSION['consumer_id'])): ?>
+    <?php include 'consumer_messages_widget.php'; ?>
+  <?php endif; ?>
 </body>
 </html>

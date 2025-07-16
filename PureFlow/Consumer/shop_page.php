@@ -84,7 +84,12 @@ $products = $stmt->fetchAll();
         </div>
       </div>
       <div class="mt-4 md:mt-0">
-        <a href="#" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm">Message Seller</a>
+        <!-- Message Seller button opens the message widget -->
+        <button type="button"
+          class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm"
+          onclick="toggleMessages();window.scrollTo({top:0,left:0,behavior:'smooth'});">
+          Message Seller
+        </button>
       </div>
     </div>
   </section>
@@ -134,6 +139,17 @@ $products = $stmt->fetchAll();
   <footer class="mt-10 py-6 text-center text-gray-500 text-sm">
     &copy; 2025 Tuy PureFlow. All rights reserved.
   </footer>
+
+  <?php if (isset($_SESSION['consumer_id'])): ?>
+    <?php include 'consumer_messages_widget.php'; ?>
+  <?php endif; ?>
+
+  <script>
+    // Ensure toggleMessages is available for the Message Seller button
+    function toggleMessages() {
+      const widget = document.getElementById('messageWidget');
+      widget.classList.toggle('translate-x-full');
+    }
+  </script>
 </body>
 </html>
-?>

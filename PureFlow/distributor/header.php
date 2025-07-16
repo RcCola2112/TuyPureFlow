@@ -6,14 +6,14 @@ $profilePic = $profilePic ?? "images/default-profile.jpg";
 ?>
 
 <header class="bg-white shadow px-6 py-4 flex items-center justify-between">
-  <!-- Left: Greeting -->
-  <div>
+  <!-- Left: Tuy PureFlow clickable -->
+  <div class="flex items-center gap-6">
+    <a href="dashboard.php" class="text-xl font-bold text-blue-600 hover:underline">Tuy PureFlow</a>
     <h2 class="text-lg font-semibold text-gray-700">
       Hello, <span class="text-blue-600"><?php echo htmlspecialchars($username); ?></span> of <span class="text-blue-600"><?php echo htmlspecialchars($shopname); ?></span>
     </h2>
   </div>
-
-  <!-- Right: Notification + Profile -->
+  <!-- Right: Notification + Profile + Logout -->
   <div class="flex items-center space-x-4">
     <!-- Notification Icon -->
     <button class="relative focus:outline-none">
@@ -30,5 +30,8 @@ $profilePic = $profilePic ?? "images/default-profile.jpg";
       <img src="<?php echo htmlspecialchars($profilePic); ?>" alt="Profile" class="w-10 h-10 rounded-full object-cover border">
       <span class="text-gray-700 font-medium"><?php echo htmlspecialchars($username); ?></span>
     </div>
+
+    <!-- Logout Button -->
+    <a href="logout.php" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium">Logout</a>
   </div>
 </header>
