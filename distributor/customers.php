@@ -1,7 +1,33 @@
 <?php
+session_start();
+include '../db.php';
 $currentPage = 'customers';
-$username = 'Juan Dela Cruz';
-$shopName = 'Dela Cruz Water Station';
+
+// Get distributor info from session or database
+$distributor_id = $_SESSION['distributor_id'] ?? 1;
+$stmt = $conn->prepare("SELECT * FROM distributor WHERE distributor_id = ?");
+$stmt->execute([$distributor_id]);
+$distributor = $stmt->fetch();
+
+$username = $distributor['name'] ?? '';
+$stmtShop = $conn->prepare("SELECT name FROM shop WHERE distributor_id = ? LIMIT 1");
+$stmtShop->execute([$distributor_id]);
+$shopname = $stmtShop->fetchColumn() ?: '';
+$profilePic = isset($distributor['profile_pic']) && $distributor['profile_pic'] ? $distributor['profile_pic'] : "images/profile.jpg";
+
+// Fetch customers who ordered from this distributor's shop(s)
+$stmt = $conn->prepare(
+  "SELECT c.name, c.phone, c.email,
+    COUNT(o.order_id) AS total_orders,
+    MAX(o.created_at) AS last_order
+   FROM consumer c
+   JOIN orders o ON c.consumer_id = o.consumer_id
+   WHERE o.shop_id IN (SELECT shop_id FROM shop WHERE distributor_id = ?)
+   GROUP BY c.consumer_id
+   ORDER BY last_order DESC"
+);
+$stmt->execute([$distributor_id]);
+$customers = $stmt->fetchAll();
 ?>
 
 <!DOCTYPE html>
@@ -11,16 +37,18 @@ $shopName = 'Dela Cruz Water Station';
   <title>Customers</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-50">
+<body class="flex bg-gray-100">
 
+  <!-- Sidebar -->
   <?php include 'sidebar.php'; ?>
-  <?php include 'header.php'; ?>
-
   <!-- Main Content -->
-  <div class="ml-64 mt-16 p-8">
-    <h1 class="text-2xl font-bold text-gray-800 mb-6">Customers</h1>
-
-    <div class="bg-white shadow rounded-lg overflow-x-auto">
+  <div class="ml-64 flex flex-col flex-1">
+    <!-- Header -->
+    <?php include 'header.php'; ?>
+    <!-- Page Content -->
+    <main class="p-8">
+      <h1 class="text-2xl font-bold text-gray-800 mb-6">Customers</h1>
+      <div class="bg-white shadow rounded-lg overflow-x-auto">
       <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-100">
           <tr>
@@ -31,28 +59,18 @@ $shopName = 'Dela Cruz Water Station';
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
+          <?php foreach ($customers as $c): ?>
           <tr>
-            <td class="px-6 py-4 whitespace-nowrap">Maria Santos</td>
-            <td class="px-6 py-4 whitespace-nowrap">09171234567</td>
-            <td class="px-6 py-4 whitespace-nowrap">8</td>
-            <td class="px-6 py-4 whitespace-nowrap">June 5, 2025</td>
+            <td class="px-6 py-4 whitespace-nowrap"><?= htmlspecialchars($c['name']) ?></td>
+            <td class="px-6 py-4 whitespace-nowrap"><?= htmlspecialchars($c['phone']) ?></td>
+            <td class="px-6 py-4 whitespace-nowrap"><?= htmlspecialchars($c['total_orders']) ?></td>
+            <td class="px-6 py-4 whitespace-nowrap"><?= date('M d, Y', strtotime($c['last_order'])) ?></td>
           </tr>
-          <tr>
-            <td class="px-6 py-4 whitespace-nowrap">Jose Rizal</td>
-            <td class="px-6 py-4 whitespace-nowrap">09181234567</td>
-            <td class="px-6 py-4 whitespace-nowrap">10</td>
-            <td class="px-6 py-4 whitespace-nowrap">June 3, 2025</td>
-          </tr>
-          <tr>
-            <td class="px-6 py-4 whitespace-nowrap">Andres Bonifacio</td>
-            <td class="px-6 py-4 whitespace-nowrap">09201234567</td>
-            <td class="px-6 py-4 whitespace-nowrap">6</td>
-            <td class="px-6 py-4 whitespace-nowrap">June 2, 2025</td>
-          </tr>
+          <?php endforeach; ?>
         </tbody>
       </table>
     </div>
+    </main>
   </div>
-
 </body>
 </html>

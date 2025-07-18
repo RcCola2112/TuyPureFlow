@@ -32,6 +32,19 @@ foreach ($selected_items as $item) {
 }
 $delivery_fee = 15;
 $total = $subtotal + $delivery_fee;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_order'])) {
+    // Forward selected_items to checkout.php via POST
+    ?>
+    <form id="forwardForm" method="POST" action="checkout.php">
+      <?php foreach ($selected_ids as $id): ?>
+        <input type="hidden" name="selected_items[]" value="<?= $id ?>">
+      <?php endforeach; ?>
+    </form>
+    <script>document.getElementById('forwardForm').submit();</script>
+    <?php
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -95,11 +108,11 @@ $total = $subtotal + $delivery_fee;
         <span>₱<?= number_format($total, 2) ?></span>
       </div>
 
-      <form action="checkout.php" method="post" class="mt-4">
+      <form action="confirm_order.php" method="post" class="mt-4">
         <?php foreach ($selected_ids as $id): ?>
           <input type="hidden" name="selected_items[]" value="<?= $id ?>">
         <?php endforeach; ?>
-        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg">Confirm</button>
+        <button type="submit" name="confirm_order" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg">Confirm</button>
       </form>
     </div>
   </main>

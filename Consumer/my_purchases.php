@@ -17,8 +17,22 @@ $status_options = ['All', 'Pending', 'Processing', 'Out for Delivery', 'Complete
 $query = "SELECT * FROM orders WHERE consumer_id = ?";
 $params = [$user_id];
 if ($status_filter !== 'All') {
-    $query .= " AND status = ?";
-    $params[] = $status_filter;
+    // "Pending" tab: show orders with status Pending
+    if ($status_filter === 'Pending') {
+        $query .= " AND status = 'Pending'";
+    }
+    // "Processing" tab: show orders with status Processing or Approved
+    elseif ($status_filter === 'Processing') {
+        $query .= " AND (status = 'Approved')";
+    }
+    // "Out for Delivery" tab: show orders with status Out for Delivery
+    elseif ($status_filter === 'Out for Delivery') {
+        $query .= " AND status = 'Out for Delivery'";
+    }
+    else {
+        $query .= " AND status = ?";
+        $params[] = $status_filter;
+    }
 }
 $query .= " ORDER BY created_at DESC";
 $stmt = $conn->prepare($query);
@@ -81,7 +95,16 @@ $purchases = $stmt->fetchAll();
                 <tr class="border-b">
                   <td class="py-2">#<?= $order['order_id'] ?></td>
                   <td class="py-2">₱<?= number_format($order['total_price'], 2) ?></td>
-                  <td class="py-2"><?= htmlspecialchars($order['status']) ?></td>
+                  <td class="py-2">
+                    <?php
+                      // Show "Processing" for status Approved
+                      if ($order['status'] === 'Approved') {
+                        echo 'Processing';
+                      } else {
+                        echo htmlspecialchars($order['status']);
+                      }
+                    ?>
+                  </td>
                   <td class="py-2"><?= $order['created_at'] ?></td>
                 </tr>
                 <?php endforeach; ?>

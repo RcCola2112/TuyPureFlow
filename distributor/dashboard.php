@@ -1,10 +1,19 @@
 <?php
+session_start();
+include '../db.php';
 $currentPage = 'dashboard';
-include 'sidebar.php';
-// Sample data from session or database
-$username = "Juan Dela Cruz";
-$shopname = "Tuy Aqua Station";
+
+// Get distributor info from session or database
+$distributor_id = $_SESSION['distributor_id'] ?? 1;
+$stmt = $conn->prepare("SELECT * FROM distributor WHERE distributor_id = ?");
+$stmt->execute([$distributor_id]);
+$distributor = $stmt->fetch();
+
+$username = $distributor['name'] ?? "Juan Dela Cruz";
+$shopname = $_SESSION['shop_name'] ?? "Tuy Aqua Station";
 $profilePic = "images/profile.jpg"; // Placeholder
+
+include 'sidebar.php';
 ?>
 
 <!DOCTYPE html>

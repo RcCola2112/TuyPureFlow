@@ -1,7 +1,24 @@
 <?php
+session_start();
+include '../db.php';
 $currentPage = 'messages';
-$username = 'Juan Dela Cruz';
-$shopName = 'Dela Cruz Water Station';
+
+// Get distributor info from session or database
+$distributor_id = $_SESSION['distributor_id'] ?? 1;
+$stmt = $conn->prepare("SELECT * FROM distributor WHERE distributor_id = ?");
+$stmt->execute([$distributor_id]);
+$distributor = $stmt->fetch();
+
+$username = $distributor['name'] ?? '';
+$stmtShop = $conn->prepare("SELECT name FROM shop WHERE distributor_id = ? LIMIT 1");
+$stmtShop->execute([$distributor_id]);
+$shopname = $stmtShop->fetchColumn() ?: '';
+$profilePic = isset($distributor['profile_pic']) && $distributor['profile_pic'] ? $distributor['profile_pic'] : "images/profile.jpg";
+
+// Fetch messages for this distributor
+$stmt = $conn->prepare("SELECT * FROM messages WHERE receiver_id = ? AND receiver_role = 'Distributor' ORDER BY created_at DESC LIMIT 20");
+$stmt->execute([$distributor_id]);
+$messages = $stmt->fetchAll();
 ?>
 
 <!DOCTYPE html>
@@ -11,24 +28,29 @@ $shopName = 'Dela Cruz Water Station';
   <title>Messages</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-50">
+<body class="flex bg-gray-100">
 
+  <!-- Sidebar -->
   <?php include 'sidebar.php'; ?>
-  <?php include 'header.php'; ?>
 
   <!-- Main Content -->
-  <div class="ml-64 mt-16 p-8">
-    <h1 class="text-2xl font-bold text-gray-800 mb-6">Messages</h1>
+  <div class="ml-64 flex flex-col flex-1">
 
-    <div class="flex gap-6">
-      
-      <!-- Sidebar Filters -->
-      <div class="w-1/5 space-y-2">
+    <!-- Header -->
+    <?php include 'header.php'; ?>
+
+    <!-- Page Content -->
+    <main class="p-6">
+      <h1 class="text-2xl font-semibold text-gray-700 mb-6">Messages</h1>
+
+      <div class="flex gap-6">
+        <!-- Sidebar Filters -->
+        <div class="w-1/5 space-y-2">
         <button class="w-full bg-blue-600 text-white py-2 rounded font-semibold">Compose</button>
         <ul class="space-y-1 text-sm text-gray-700">
           <li><button class="w-full text-left py-1 px-2 hover:bg-blue-100 rounded">📨 All</button></li>
           <li><button class="w-full text-left py-1 px-2 hover:bg-blue-100 rounded">✉️ Unread</button></li>
-          <li><button class="w-full text-left py-1 px-2 hover:bg-blue-100 rounded">📋 Reports</button></li>
+<body class="flex bg-gray-100">
           <li><button class="w-full text-left py-1 px-2 hover:bg-blue-100 rounded">🚫 Damaged Goods</button></li>
           <li><button class="w-full text-left py-1 px-2 hover:bg-blue-100 rounded">🚚 Delivery Issues</button></li>
           <li><button class="w-full text-left py-1 px-2 hover:bg-blue-100 rounded">📦 Order Inquiries</button></li>
@@ -37,7 +59,8 @@ $shopName = 'Dela Cruz Water Station';
           <li><button class="w-full text-left py-1 px-2 hover:bg-blue-100 rounded">📁 Archived</button></li>
         </ul>
       </div>
-
+  <div class="ml-64 flex flex-col flex-1">
+    <main class="p-6">
       <!-- Message Content Area -->
       <div class="w-4/5">
         <!-- Top Toolbar -->
@@ -53,50 +76,27 @@ $shopName = 'Dela Cruz Water Station';
 
         <!-- Message List -->
         <div class="bg-white shadow rounded-lg overflow-hidden divide-y">
-          <!-- Example Message Row -->
+          <?php foreach ($messages as $msg): ?>
           <label class="block hover:bg-gray-50 cursor-pointer">
             <div class="flex items-center p-4 gap-3">
               <input type="checkbox" class="w-4 h-4">
               <div class="flex-1">
                 <div class="flex justify-between">
-                  <span class="font-semibold text-gray-800">Maria Santos</span>
-                  <span class="text-sm text-gray-400">2 min ago</span>
+                  <span class="font-semibold text-gray-800"><?= htmlspecialchars($msg['sender_role']) ?> #<?= htmlspecialchars($msg['sender_id']) ?></span>
+                  <span class="text-sm text-gray-400"><?= date('M d, Y H:i', strtotime($msg['created_at'])) ?></span>
                 </div>
-                <p class="text-sm text-gray-600 mt-1 truncate">Hi! I'd like to confirm my order and ask about the delivery window...</p>
+                <p class="text-sm text-gray-600 mt-1 truncate"><?= htmlspecialchars($msg['message']) ?></p>
               </div>
             </div>
           </label>
-
-          <label class="block hover:bg-gray-50 cursor-pointer">
-            <div class="flex items-center p-4 gap-3">
-              <input type="checkbox" class="w-4 h-4">
-              <div class="flex-1">
-                <div class="flex justify-between">
-                  <span class="font-semibold text-gray-800">Jose Rizal</span>
-                  <span class="text-sm text-gray-400">10 min ago</span>
-                </div>
-                <p class="text-sm text-gray-600 mt-1 truncate">Can I change my delivery address from Zone 2 to Zone 5?</p>
-              </div>
-            </div>
-          </label>
-
-          <label class="block hover:bg-gray-50 cursor-pointer">
-            <div class="flex items-center p-4 gap-3">
-              <input type="checkbox" class="w-4 h-4">
-              <div class="flex-1">
-                <div class="flex justify-between">
-                  <span class="font-semibold text-gray-800">Andres Bonifacio</span>
-                  <span class="text-sm text-gray-400">Yesterday</span>
-                </div>
-                <p class="text-sm text-gray-600 mt-1 truncate">Thanks for the fast delivery! Great service!</p>
-              </div>
-            </div>
-          </label>
+          <?php endforeach; ?>
         </div>
       </div>
 
     </div>
   </div>
 
+</body>
+</html>
 </body>
 </html>

@@ -45,7 +45,7 @@ $stations = $stmt->fetchAll();
           <a href="account.php" class="text-sm text-gray-600 hover:text-blue-600">
             Hello, <?= htmlspecialchars($_SESSION['consumer_name']) ?>
           </a>
-          <a href="logout.php" class="text-sm text-gray-600 hover:text-blue-600">Logout</a>
+          <a href="logout.php" class="text-sm text-red-500 hover:bg-red-100 hover:text-red-700 px-2 py-1 rounded transition">Logout</a>
         <?php else: ?>
           <!-- Account Dropdown Button -->
           <div class="relative group">

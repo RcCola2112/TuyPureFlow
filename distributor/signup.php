@@ -1,5 +1,50 @@
 <?php
 // signup.php
+session_start();
+include '../db.php';
+
+$error = '';
+$success = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $business_name = trim($_POST['business_name'] ?? '');
+    $owner_name = trim($_POST['owner_name'] ?? '');
+    $contact = trim($_POST['contact'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $hours = trim($_POST['hours'] ?? '');
+    $street = trim($_POST['street'] ?? '');
+    $city = trim($_POST['city'] ?? '');
+    $region = trim($_POST['region'] ?? '');
+    $map_location = trim($_POST['map_location'] ?? '');
+    $username = trim($_POST['username'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $confirm_password = $_POST['confirm_password'] ?? '';
+    // File uploads: permit, id, proof
+    // ...handle file uploads as needed...
+
+    if (!$business_name || !$owner_name || !$contact || !$email || !$hours || !$street || !$city || !$region || !$map_location || !$username || !$password || !$confirm_password) {
+        $error = "All fields are required.";
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error = "Invalid email address.";
+    } elseif ($password !== $confirm_password) {
+        $error = "Passwords do not match.";
+    } else {
+        // Check if email already exists
+        $stmt = $conn->prepare("SELECT * FROM distributor WHERE email = ?");
+        $stmt->execute([$email]);
+        if ($stmt->fetch()) {
+            $error = "Email already registered.";
+        } else {
+            $hashed = password_hash($password, PASSWORD_DEFAULT);
+            $stmt = $conn->prepare("INSERT INTO distributor (name, email, phone, password) VALUES (?, ?, ?, ?)");
+            if ($stmt->execute([$business_name, $email, $contact, $hashed])) {
+                $success = "Account created! You can now <a href='login.php' class='text-blue-600 underline'>login</a>.";
+            } else {
+                $error = "Registration failed. Please try again.";
+            }
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -56,7 +101,7 @@
     });
   </script>
 </head>
-<body class="bg-gray-100 py-10">
+<body class="bg-gray-100">
   <!-- Custom Fixed Header -->
   <header class="fixed top-0 left-0 w-full bg-white shadow z-50">
     <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
@@ -139,6 +184,14 @@
         </div>
 
       </form>
+
+      <!-- Show error/success messages above the form -->
+      <?php if ($error): ?>
+        <div class="mb-4 text-red-500 text-center"><?= htmlspecialchars($error) ?></div>
+      <?php elseif ($success): ?>
+        <div class="mb-4 text-green-600 text-center"><?= $success ?></div>
+      <?php endif; ?>
+
     </div>
   </div>
 </body>

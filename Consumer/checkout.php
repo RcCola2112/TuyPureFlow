@@ -29,6 +29,43 @@ foreach ($cart_items as $item) {
 }
 $delivery_fee = 15.00;
 $total = $subtotal + $delivery_fee;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
+    // Place order logic
+    // 1. Create a new order
+    $shop_id = null;
+    if (!empty($cart_items)) {
+        // Get shop_id from the first cart item's container
+        $container_id = $cart_items[0]['container_id'];
+        $stmt = $conn->prepare("SELECT shop_id FROM container WHERE container_id = ?");
+        $stmt->execute([$container_id]);
+        $shop_id = $stmt->fetchColumn();
+    }
+    $order_status = 'Pending';
+    $order_total = $total;
+
+    $stmt = $conn->prepare("INSERT INTO orders (consumer_id, shop_id, status, total_price) VALUES (?, ?, ?, ?)");
+    $stmt->execute([$user_id, $shop_id, $order_status, $order_total]);
+    $order_id = $conn->lastInsertId();
+
+    // 2. Add order items
+    foreach ($cart_items as $item) {
+        $stmt = $conn->prepare("INSERT INTO order_items (order_id, container_id, quantity, price) VALUES (?, ?, ?, ?)");
+        $stmt->execute([$order_id, $item['container_id'], $item['qty'], $item['price']]);
+    }
+
+    // 3. Remove items from cart
+    $cart_ids = array_column($cart_items, 'cart_id');
+    if ($cart_ids) {
+        $in = str_repeat('?,', count($cart_ids) - 1) . '?';
+        $stmt = $conn->prepare("DELETE FROM cart WHERE cart_id IN ($in) AND user_id = ?");
+        $stmt->execute(array_merge($cart_ids, [$user_id]));
+    }
+
+    // Status is always Pending after placing order
+    header('Location: my_purchases.php');
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -91,11 +128,11 @@ $total = $subtotal + $delivery_fee;
           <span>Total</span>
           <span>₱<?= number_format($total, 2) ?></span>
         </div>
-        <form method="POST" action="place_order.php" class="mt-4">
+        <form method="POST" action="checkout.php" class="mt-4">
           <?php foreach ($selected_ids as $id): ?>
             <input type="hidden" name="selected_items[]" value="<?= $id ?>">
           <?php endforeach; ?>
-          <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg">Place Order</button>
+          <button type="submit" name="place_order" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg">Place Order</button>
         </form>
       </div>
     </div>
