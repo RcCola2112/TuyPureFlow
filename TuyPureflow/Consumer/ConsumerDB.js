@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, TextInput, useWindowDimensions, FlatList, Platform } from 'react-native';
+import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, TextInput, useWindowDimensions, FlatList, Platform, RefreshControl, Dimensions, Modal, Button, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons, MaterialIcons, FontAwesome, FontAwesome5, Entypo } from '@expo/vector-icons';
 import ConsumerNavBar from './ConsumerNavBar';
+import GallonsImg from '../assets/Gallons.jpg';
 
 const filters = [
   'All', 'Near me', 'Top Rating', 'Fastest Delivery', 'Open Now', 'Most Orders', 'Price Range', 'Discounts'
@@ -51,17 +52,42 @@ const adImages = [
   require('../assets/Adver.png'),
 ];
 
-export default function ConsumerDB() {
+const numColumns = 2;
+const CARD_MARGIN = 12;
+const CARD_WIDTH = (Dimensions.get('window').width - (numColumns + 1) * CARD_MARGIN) / numColumns;
+const BANNER_HEIGHT = 200;
+
+export default function ConsumerDB({ route }) {
   const navigation = useNavigation();
+  const user = route?.params?.user;
   const { width } = useWindowDimensions();
   const isTablet = width > 600;
-  const CARD_WIDTH = width > 400 ? 170 : (width - 48) / 2;
-  const BANNER_HEIGHT = 200;
   const [selectedFilter, setSelectedFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [adIndex, setAdIndex] = useState(1);
   const scrollRef = useRef();
   const [language, setLanguage] = useState('English');
+  const [shops, setShops] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [messageModalVisible, setMessageModalVisible] = useState(false);
+  const [selectedShop, setSelectedShop] = useState(null);
+  const [messageText, setMessageText] = useState('');
+  const [messageLog, setMessageLog] = useState([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  const fetchShops = () => {
+    fetch('http://192.168.1.3/pureflowBackend/all_shops_with_containers.php')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setShops(data);
+        setRefreshing(false);
+      });
+  };
+
+  useEffect(() => {
+    fetchShops();
+  }, []);
 
   // Prepare carousel data: [last, ...ads, first]
   const carouselAds = [adImages[adImages.length - 1], ...adImages, adImages[0]];
@@ -116,69 +142,147 @@ export default function ConsumerDB() {
     alert('Advertisement clicked!');
   };
 
+  const openMessageModal = async (shop) => {
+    setSelectedShop(shop);
+    setMessageModalVisible(true);
+    setMessageText('');
+    setMessageLog([]);
+    setLoadingMessages(true);
+    try {
+      const res = await fetch(
+        `http://192.168.1.3/pureflowBackend/get_messages.php?consumer_id=${user.consumer_id}&distributor_id=${shop.distributor_id}`
+      );
+      const data = await res.json();
+      if (data.success && Array.isArray(data.messages)) {
+        setMessageLog(data.messages);
+      } else {
+        setMessageLog([]);
+      }
+    } catch (e) {
+      setMessageLog([]);
+    }
+    setLoadingMessages(false);
+  };
+
+  const handleSendMessage = async () => {
+    if (!user || !selectedShop || !messageText.trim()) return;
+    setSending(true);
+
+    // Log the data being sent
+    const payload = {
+      consumer_id: user.consumer_id,
+      distributor_id: selectedShop.distributor_id,
+      message: messageText,
+      sender: 'consumer',
+    };
+    console.log('Sending message payload:', payload);
+
+    // Optimistically add the message to the log
+    const newMsg = {
+      id: Date.now(),
+      message: messageText,
+      sender: 'consumer',
+      sent_at: new Date().toISOString(),
+    };
+    setMessageLog(prev => [...prev, newMsg]);
+    setMessageText('');
+
+    try {
+      const res = await fetch('http://192.168.1.3/pureflowBackend/send_message.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      console.log('Send message response:', data);
+      setTimeout(() => {
+        fetch(`http://192.168.1.3/pureflowBackend/get_messages.php?consumer_id=${user.consumer_id}&distributor_id=${selectedShop.distributor_id}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.success && Array.isArray(data.messages)) {
+              setMessageLog(data.messages);
+            }
+          });
+      }, 1000);
+    } catch (e) {
+      console.log('Send message error:', e);
+    }
+    setSending(false);
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
-      <ConsumerNavBar navigation={navigation} search={search} setSearch={setSearch} style={styles.fixedNavBar} />
+      <ConsumerNavBar navigation={navigation} search={search} setSearch={setSearch} user={user} style={styles.fixedNavBar} />
       <View style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
-          {/* Advertisement Banner - Modern Full-Width Carousel */}
-          <ScrollView
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            ref={scrollRef}
-            style={{ width, height: BANNER_HEIGHT, backgroundColor: '#fff', marginTop: 10 }}
-            onMomentumScrollEnd={handleMomentumScrollEnd}
-          >
-            {carouselAds.map((img, idx) => (
-              <Image
-                key={idx}
-                source={img}
-                style={{
-                  width,
-                  height: BANNER_HEIGHT,
-                  resizeMode: 'cover',
-                  borderRadius: 12,
-                }}
-              />
-            ))}
-          </ScrollView>
-          <View style={styles.adDotsRow}>
-            {adImages.map((_, idx) => (
-              <View key={idx} style={[styles.adDot, adIndex - 1 === idx && styles.adDotActive]} />
-            ))}
-          </View>
-          {/* Filters */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
-            {filters.map((f) => (
+        <FlatList
+          data={shops}
+          keyExtractor={shop => String(shop.shop_id)}
+          renderItem={({ item: shop }) => (
+            <View style={styles.shopCard}>
               <TouchableOpacity
-                key={f}
-                style={[styles.filterBtn, selectedFilter === f && styles.filterBtnActive]}
-                onPress={() => setSelectedFilter(f)}
+                style={{ flex: 1 }}
+                onPress={() => navigation.navigate('ShopDetail', { shop, user })}
+                activeOpacity={0.85}
               >
-                <Text style={[styles.filterText, selectedFilter === f && styles.filterTextActive]}>{f}</Text>
+                <Image source={GallonsImg} style={styles.shopLogo} resizeMode="contain" />
+                <Text style={styles.shopName}>{shop.shop_name}</Text>
+                {shop.containers && shop.containers.length > 0 && (
+                  <Text style={styles.containerType}>{shop.containers[0].container_type}</Text>
+                )}
               </TouchableOpacity>
-            ))}
-          </ScrollView>
-          {/* Product Grid */}
-          <View style={styles.productGrid}>
-            {products.map((item) => (
               <TouchableOpacity
-                key={item.id}
-                style={[styles.productCard, { width: CARD_WIDTH }]}
-                onPress={() => navigation.navigate('ShopDetail', { product: item })}
+                style={styles.messageBtn}
+                onPress={() => openMessageModal(shop)}
               >
-                <Image source={item.image} style={styles.productImg} resizeMode="contain" />
-                <Text style={styles.productShop}>{item.shop}</Text>
-                <Text style={styles.productDesc}>{item.container}:</Text>
-                <Text style={styles.productDesc}>Refill: {item.refill}</Text>
-                <Text style={styles.productDesc}>Retail: {item.retail}</Text>
-                <Text style={styles.productDesc}>Special delivery: {item.special}</Text>
+                <Text style={styles.messageBtnText}>Message</Text>
               </TouchableOpacity>
-            ))}
-          </View>
-        </ScrollView>
+            </View>
+          )}
+          numColumns={numColumns}
+          columnWrapperStyle={numColumns > 1 ? { justifyContent: 'space-between' } : null}
+          contentContainerStyle={styles.gridContainer}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchShops(); }} />}
+          showsVerticalScrollIndicator={false}
+        />
       </View>
+      <Modal
+        visible={messageModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setMessageModalVisible(false)}
+      >
+        <View style={styles.modalBg}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Message {selectedShop?.shop_name}</Text>
+            {loadingMessages ? (
+              <ActivityIndicator size="large" color="#007AFF" />
+            ) : (
+              <FlatList
+                data={messageLog}
+                keyExtractor={item => String(item.id)}
+                renderItem={({ item }) => (
+                  <View style={[styles.logMsg, item.sender === 'consumer' ? styles.logMsgRight : styles.logMsgLeft]}>
+                    <Text style={{ color: '#222' }}>{item.message}</Text>
+                    <Text style={styles.logTime}>{item.sent_at ? new Date(item.sent_at).toLocaleString() : ''}</Text>
+                  </View>
+                )}
+                contentContainerStyle={styles.logContainer}
+              />
+            )}
+            <View style={styles.inputRow}>
+              <TextInput
+                style={styles.input}
+                value={messageText}
+                onChangeText={setMessageText}
+                placeholder="Type your message..."
+                editable={!sending}
+              />
+              <Button title={sending ? 'Sending...' : 'Send'} onPress={handleSendMessage} disabled={sending || !messageText.trim()} />
+            </View>
+            <Button title="Close" onPress={() => setMessageModalVisible(false)} />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -370,17 +474,19 @@ const styles = StyleSheet.create({
   },
   productCard: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
+    borderRadius: 16, // was 12
+    padding: 20, // was 12
+    marginBottom: 20, // was 16
     alignItems: 'center',
-    elevation: 2,
+    elevation: 3, // was 2
     shadowColor: '#3578C9',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
+    shadowOpacity: 0.10, // was 0.08
+    shadowRadius: 6, // was 4
     borderWidth: 1,
     borderColor: '#e0e0e0',
+    minWidth: 150, // add min width for bigger card
+    minHeight: 140, // add min height for bigger card
   },
   productImg: {
     width: 70,
@@ -394,8 +500,129 @@ const styles = StyleSheet.create({
     color: '#3578C9',
   },
   productDesc: {
-    fontSize: 13.5,
+    fontSize: 16, // was 13.5
     color: '#222',
-    marginBottom: 1,
+    marginBottom: 4, // was 1
+    fontWeight: '500', // add for better visibility
+  },
+  shopSection: {
+    marginBottom: 24,
+  },
+  shopLogo: {
+    width: CARD_WIDTH - 40,
+    height: CARD_WIDTH - 40,
+    borderRadius: 12,
+    backgroundColor: '#eaf6fa',
+    marginBottom: 10,
+  },
+  shopCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: CARD_MARGIN,
+    width: CARD_WIDTH,
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#3578C9',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.10,
+    shadowRadius: 6,
+  },
+  shopName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#3578C9',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  containerType: {
+    fontSize: 14,
+    color: '#888',
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  gridContainer: {
+    padding: CARD_MARGIN,
+    paddingBottom: 24,
+  },
+  messageBtn: {
+    marginTop: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    backgroundColor: '#3FE0E8',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#3FE0E8',
+  },
+  messageBtnText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  modalBg: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalCard: {
+    width: '90%',
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    color: '#333',
+  },
+  logContainer: {
+    maxHeight: 300, // Limit the height of the message log
+    width: '100%',
+    marginBottom: 15,
+  },
+  logMsg: {
+    maxWidth: '80%',
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  logMsgLeft: {
+    backgroundColor: '#e0e0e0',
+    alignSelf: 'flex-start',
+  },
+  logMsgRight: {
+    backgroundColor: '#3FE0E8',
+    alignSelf: 'flex-end',
+  },
+  logTime: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 5,
+    alignSelf: 'flex-end',
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    marginTop: 10,
+  },
+  input: {
+    flex: 1,
+    backgroundColor: '#f4f7fb',
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    fontSize: 16,
+    color: '#222',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    marginRight: 10,
   },
 }); 

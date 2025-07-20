@@ -3,7 +3,7 @@ import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, TextInput,
 import { Ionicons, FontAwesome, FontAwesome5, Entypo } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function ConsumerNavBar({ navigation, search, setSearch }) {
+export default function ConsumerNavBar({ navigation, search, setSearch, user }) {
   const { width } = useWindowDimensions();
   const isTablet = width > 600;
   const [language, setLanguage] = useState('English');
@@ -31,10 +31,10 @@ export default function ConsumerNavBar({ navigation, search, setSearch }) {
               <View style={styles.notifDot} />
               <Text style={[styles.navBtnText, { color: '#3FE0E8', marginLeft: 3 }]}>Notification</Text>
             </TouchableOpacity>
-            <View style={styles.userWrap}>
+            <TouchableOpacity style={styles.userWrap} onPress={() => navigation.navigate('Profile', user ? { user } : undefined)}>
               <View style={styles.userCircle} />
-              <Text style={styles.userName}>User Name</Text>
-            </View>
+              <Text style={styles.userName}>Profile</Text>
+            </TouchableOpacity>
           </ScrollView>
         </View>
         {/* Logo and Search Bar */}

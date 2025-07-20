@@ -45,9 +45,23 @@ $passwordHash = password_hash($data['password'], PASSWORD_DEFAULT);
 $usernameInput = isset($data['username']) ? $conn->real_escape_string($data['username']) : null;
 $role = "Distributor";
 
-$business_permit = isset($data['business_permit']) ? $conn->real_escape_string($data['business_permit']) : null;
-$valid_government_id = isset($data['valid_government_id']) ? $conn->real_escape_string($data['valid_government_id']) : null;
-$proof_of_address = isset($data['proof_of_address']) ? $conn->real_escape_string($data['proof_of_address']) : null;
+// Decode base64 file data and save as files, store file paths
+$uploadDir = __DIR__ . '/uploads/';
+if (!file_exists($uploadDir)) {
+    mkdir($uploadDir, 0777, true);
+}
+
+function saveBase64File($base64, $prefix, $distributor_id, $uploadDir) {
+    if (!$base64) return null;
+    $filename = $prefix . '_' . $distributor_id . '_' . uniqid() . '.bin';
+    $filePath = $uploadDir . $filename;
+    file_put_contents($filePath, base64_decode($base64));
+    return 'uploads/' . $filename;
+}
+
+$business_permit_path = isset($data['business_permit']) ? saveBase64File($data['business_permit'], 'permit', time(), $uploadDir) : null;
+$valid_government_id_path = isset($data['valid_government_id']) ? saveBase64File($data['valid_government_id'], 'id', time(), $uploadDir) : null;
+$proof_of_address_path = isset($data['proof_of_address']) ? saveBase64File($data['proof_of_address'], 'address', time(), $uploadDir) : null;
 
 // Check if email already exists
 $checkEmail = $conn->prepare("SELECT distributor_id FROM distributor WHERE email = ?");
@@ -74,11 +88,11 @@ if (!$stmt->execute()) {
 $distributor_id = $stmt->insert_id;
 $stmt->close();
 
-// Insert into address table
-$insertAddress = $conn->prepare("INSERT INTO address (distributor_id, street, city, province, zip_code, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?, ?)");
+// Insert into distributor_address table
+$insertAddress = $conn->prepare("INSERT INTO distributor_address (distributor_id, street, city, province, zip_code, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?, ?)");
 $insertAddress->bind_param("issssdd", $distributor_id, $street, $city, $province, $zip_code, $latitude, $longitude);
 if (!$insertAddress->execute()) {
-    echo json_encode(["success" => false, "message" => "Failed to insert address."]);
+    echo json_encode(["success" => false, "message" => "Failed to insert distributor address."]);
     $insertAddress->close();
     $conn->close();
     exit;
@@ -87,7 +101,7 @@ $insertAddress->close();
 
 // Insert into distributor_documents table
 $insertDocs = $conn->prepare("INSERT INTO distributor_documents (distributor_id, business_permit, valid_government_id, proof_of_address) VALUES (?, ?, ?, ?)");
-$insertDocs->bind_param("isss", $distributor_id, $business_permit, $valid_government_id, $proof_of_address);
+$insertDocs->bind_param("isss", $distributor_id, $business_permit_path, $valid_government_id_path, $proof_of_address_path);
 if (!$insertDocs->execute()) {
     echo json_encode(["success" => false, "message" => "Failed to insert distributor documents."]);
     $insertDocs->close();

@@ -22,7 +22,7 @@ export default function DistributorDrawerNavigator({ route }) {
   const [shopName, setShopName] = useState('');
   useEffect(() => {
     if (distributor?.distributor_id) {
-      fetch(`http://192.168.1.20/pureflowBackend/get_shop_name.php?distributor_id=${distributor.distributor_id}`)
+      fetch(`http://192.168.1.3/pureflowBackend/get_shop_name.php?distributor_id=${distributor.distributor_id}`)
         .then(res => res.json())
         .then(data => {
           if (data.success && data.shop_name) setShopName(data.shop_name);
@@ -62,6 +62,7 @@ export default function DistributorDrawerNavigator({ route }) {
       <Drawer.Screen
         name="Orders"
         component={OrdersScreen}
+        initialParams={{ distributor }}
         options={{
           drawerIcon: ({ color, size }) => (
             <Text style={[styles.drawerIcon, { color }]}>🛒</Text>
@@ -81,6 +82,7 @@ export default function DistributorDrawerNavigator({ route }) {
       <Drawer.Screen
         name="Messages"
         component={MessagesScreen}
+        initialParams={{ distributor }}
         options={{
           drawerIcon: ({ color, size }) => (
             <Text style={[styles.drawerIcon, { color }]}>✉️</Text>

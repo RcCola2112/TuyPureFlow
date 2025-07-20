@@ -5,12 +5,13 @@ import * as Location from 'expo-location';
 import MapView, { Marker } from 'react-native-maps';
 import * as DocumentPicker from 'expo-document-picker';
 import CheckBox from 'react-native-check-box';
+import * as FileSystem from 'expo-file-system';
 
 const { width } = Dimensions.get('window');
 const CARD_MAX_WIDTH = width > 500 ? 500 : width - 32;
 
 // Set your backend base URL here using your IPv4 address and correct folder
-const API_BASE_URL = 'http://192.168.1.20/pureflowBackend';
+const API_BASE_URL = 'http://192.168.1.3/pureflowBackend';
 
 export default function Login({ navigation }) {
   const [step, setStep] = useState(1);
@@ -83,11 +84,33 @@ export default function Login({ navigation }) {
     }
   };
 
+  const getFileBase64 = async (file) => {
+    if (!file || !file.uri) return null;
+    return await FileSystem.readAsStringAsync(file.uri, { encoding: FileSystem.EncodingType.Base64 });
+  };
+
   const handleSubmit = async () => {
     if (!agreeTerms || !agreePrivacy) {
       alert('You must agree to the Terms & Conditions and Privacy Policy.');
       return;
     }
+
+    // Debug: Log file picker state
+    console.log('permitFile:', permitFile);
+    console.log('idFile:', idFile);
+    console.log('addressFile:', addressFile);
+
+    // User feedback if any file is missing
+    if (!permitFile || !idFile || !addressFile) {
+      alert('Please upload all required documents before submitting.');
+      return;
+    }
+
+    // Read files as base64
+    const business_permit = await getFileBase64(permitFile);
+    const valid_government_id = await getFileBase64(idFile);
+    const proof_of_address = await getFileBase64(addressFile);
+
     const payload = {
       business_name: businessName,
       owner_name: ownerName,
@@ -102,8 +125,13 @@ export default function Login({ navigation }) {
       longitude: locationCoords ? String(locationCoords.longitude) : '',
       username: username,
       password: password,
-      // If you want to send document fields, add them here as base64 or URLs
+      business_permit,
+      valid_government_id,
+      proof_of_address,
     };
+
+    console.log('Distributor payload:', payload); // Debugging
+
     try {
       const response = await fetch(`${API_BASE_URL}/distributor_signup.php`, {
         method: 'POST',

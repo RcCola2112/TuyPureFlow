@@ -24,14 +24,17 @@ export default function DistributorDB({ navigation, route }) {
   const [shopName, setShopName] = useState('');
   useEffect(() => {
     if (distributor?.distributor_id) {
-      fetch(`http://192.168.1.20/pureflowBackend/get_shop_name.php?distributor_id=${distributor.distributor_id}`)
+      fetch(`http://192.168.1.3/pureflowBackend/get_shop_name.php?distributor_id=${distributor.distributor_id}`)
         .then(res => res.json())
         .then(data => {
           if (data.success && data.shop_name) setShopName(data.shop_name);
         });
     }
   }, [distributor]);
-  console.log('Distributor:', distributor);
+  // Only log distributor if it is defined
+  if (distributor) {
+    console.log('Distributor:', distributor);
+  }
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = () => {
     setRefreshing(true);

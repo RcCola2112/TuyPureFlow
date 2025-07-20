@@ -75,8 +75,14 @@ export default function ConsumerSignUp({ navigation: propNavigation }) {
       longitude = latLngMatch[2];
     }
 
+    // Before sending the fetch request for signup
+    const randomLat = (Math.random() * (14.7 - 14.0) + 14.0).toFixed(6); // Example: somewhere in the Philippines
+    const randomLng = (Math.random() * (121.1 - 120.9) + 120.9).toFixed(6);
+    const latitudeToSend = latitude || randomLat;
+    const longitudeToSend = longitude || randomLng;
+
     try {
-      const response = await fetch('http://192.168.1.20/pureflowBackend/consumer_signup.php', {
+      const response = await fetch('http://192.168.1.3/pureflowBackend/consumer_signup.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -88,8 +94,8 @@ export default function ConsumerSignUp({ navigation: propNavigation }) {
           city: barangay,
           province: province,
           zip_code: zipCode,
-          latitude: latitude,
-          longitude: longitude,
+          latitude: latitudeToSend,
+          longitude: longitudeToSend,
         }),
       });
 

@@ -1,10 +1,37 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Alert } from 'react-native';
 import { DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawer';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function CustomDrawerContent(props) {
   const { distributor, shopName } = props;
+  
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: () => {
+            // Close drawer first
+            props.navigation.closeDrawer();
+            // Navigate to App.js root (Home screen)
+            props.navigation.reset({
+              index: 0,
+              routes: [{ name: 'Home' }],
+            });
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient colors={["#3FE0E8", "#3578C9"]} style={styles.header}>
@@ -20,11 +47,7 @@ export default function CustomDrawerContent(props) {
       </DrawerContentScrollView>
       
       <View style={styles.bottomSection}>
-        <TouchableOpacity style={styles.logoutButton} onPress={() => {
-          // Handle logout
-          props.navigation.closeDrawer();
-          // Add your logout logic here
-        }}>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutIcon}>🚪</Text>
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>

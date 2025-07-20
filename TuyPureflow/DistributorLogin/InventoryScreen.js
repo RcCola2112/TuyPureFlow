@@ -31,14 +31,14 @@ export default function InventoryScreen({ route }) {
   const [shopId, setShopId] = useState(null);
 
   // API Base URL - Change this to your computer's IP address
-  const API_BASE_URL = 'http://192.168.1.20/pureflowBackend'; // Replace with your actual IP address
+  const API_BASE_URL = 'http://192.168.1.3/pureflowBackend'; // Replace with your actual IP address
 
   const distributor = route?.params?.distributor;
 
   useEffect(() => {
     if (distributor && distributor.distributor_id) {
       // Fetch shop_id for this distributor
-      fetch(`http://192.168.1.20/pureflowBackend/get_shop_id.php?distributor_id=${distributor.distributor_id}`)
+      fetch(`http://192.168.1.3/pureflowBackend/get_shop_id.php?distributor_id=${distributor.distributor_id}`)
         .then(res => res.json())
         .then(data => {
           if (data.success && data.shop_id) setShopId(data.shop_id);
@@ -61,7 +61,7 @@ export default function InventoryScreen({ route }) {
         setContainers(data.containers.map(container => ({
           id: container.container_id,
           name: container.Container_Name, // map Container_Name from backend
-          type: container.type,
+          container_type: container.container_type,
           price: parseFloat(container.price),
           stock: parseInt(container.stock_quantity),
           damaged: parseInt(container.damaged_quantity)
@@ -119,7 +119,7 @@ export default function InventoryScreen({ route }) {
           body: JSON.stringify({
             shop_id: shopId,
             Container_Name: newContainerName, // changed from 'name'
-            type: newContainerType,
+            container_type: newContainerType,
             price: parseFloat(newContainerPrice),
             stock_quantity: 0,
             damaged_quantity: 0
@@ -182,7 +182,7 @@ export default function InventoryScreen({ route }) {
   const handleEditContainer = (idx) => {
     setEditContainerIndex(idx);
     setEditContainerName(containers[idx].name);
-    setEditContainerType(containers[idx].type || 'Container');
+    setEditContainerType(containers[idx].container_type || 'Container');
     setEditContainerPrice(containers[idx].price ? String(containers[idx].price) : '');
     setContainerModalVisible(true);
   };
@@ -197,7 +197,7 @@ export default function InventoryScreen({ route }) {
           body: JSON.stringify({
             container_id: containers[editContainerIndex].id,
             Container_Name: editContainerName, // changed from 'name'
-            type: editContainerType,
+            container_type: editContainerType,
             price: parseFloat(editContainerPrice),
             stock_quantity: containers[editContainerIndex].stock,
             damaged_quantity: containers[editContainerIndex].damaged
@@ -236,7 +236,7 @@ export default function InventoryScreen({ route }) {
         body: JSON.stringify({
           container_id: containers[idx].id,
           Container_Name: containers[idx].name, // changed from 'name'
-          type: containers[idx].type,
+          container_type: containers[idx].container_type,
           price: containers[idx].price,
           stock_quantity: updatedStock,
           damaged_quantity: containers[idx].damaged
@@ -290,7 +290,7 @@ export default function InventoryScreen({ route }) {
         body: JSON.stringify({
           container_id: containers[idx].id,
           Container_Name: containers[idx].name, // changed from 'name'
-          type: containers[idx].type,
+          container_type: containers[idx].container_type,
           price: containers[idx].price,
           stock_quantity: updatedStock,
           damaged_quantity: updatedDamaged
@@ -345,7 +345,7 @@ export default function InventoryScreen({ route }) {
           </TouchableOpacity>
           {containers.map((container, idx) => (
             <View key={container.id || idx} style={styles.itemRow}>
-              <Text style={styles.cardText}>{container.name} <Text style={styles.typeText}>({container.type || 'Container'})</Text>: ₱{container.price?.toFixed(2) || '0.00'} | {container.stock} units <Text style={styles.damagedText}>(Damaged: {container.damaged})</Text></Text>
+              <Text style={styles.cardText}>{container.name} <Text style={styles.typeText}>({container.container_type || 'Container'})</Text>: ₱{container.price?.toFixed(2) || '0.00'} | {container.stock} units <Text style={styles.damagedText}>(Damaged: {container.damaged})</Text></Text>
               <View style={styles.actionRow}>
                 <TouchableOpacity onPress={() => handleStockChange(idx, 1)} style={styles.iconBtn}><Ionicons name="add" size={18} color="#3FE0E8" /></TouchableOpacity>
                 <TouchableOpacity onPress={() => handleStockChange(idx, -1)} style={styles.iconBtn}><Ionicons name="remove" size={18} color="#3FE0E8" /></TouchableOpacity>

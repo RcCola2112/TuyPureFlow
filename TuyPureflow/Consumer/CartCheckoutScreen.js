@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Modal, ActivityIndicator, Alert } from 'react-native';
 import ConsumerNavBar from './ConsumerNavBar';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5, AntDesign } from '@expo/vector-icons';
@@ -8,12 +8,10 @@ export default function CartCheckoutScreen({ route }) {
   const navigation = useNavigation();
   const [search, setSearch] = useState('');
   // Accept product and quantity from params, or use demo data
-  const { product, quantity: initialQty } = route.params || {};
-  const [quantities, setQuantities] = useState([
-    { name: 'Container 1', price: 30, qty: initialQty || 3, img: require('../assets/Gallons.jpg') },
-    { name: 'Container 2', price: 30, qty: initialQty || 3, img: require('../assets/Gallons.jpg') },
-  ]);
-  const total = quantities.reduce((sum, c) => sum + c.price * c.qty, 0);
+  const { product, quantity: initialQty, user, shop } = route.params || {};
+  // Remove the hardcoded quantities array and use the selected product
+  const [quantity, setQuantity] = useState(initialQty || 1);
+  const total = product ? (product.price || product.retail || 0) * quantity : 0;
   const [modalVisible, setModalVisible] = useState(false);
   const [addressModalVisible, setAddressModalVisible] = useState(false);
 
@@ -22,12 +20,42 @@ export default function CartCheckoutScreen({ route }) {
   const address = 'House Number, Barangay';
   const map = '14°01\'23.8"N 120°43\'32.9"E';
 
-  const handleQty = (idx, delta) => {
-    setQuantities(qs => qs.map((c, i) => i === idx ? { ...c, qty: Math.max(1, c.qty + delta) } : c));
-  };
+  // Remove handleQty function
 
   const handleConfirmAddress = () => {
     setAddressModalVisible(false);
+  };
+
+  const handleConfirmOrder = async () => {
+    if (!product || !user || !shop) {
+      Alert.alert('Error', 'Missing product, user, or shop info.');
+      return;
+    }
+    const price = product.price || product.retail || product.refill || 0;
+    try {
+      const response = await fetch('http://192.168.1.3/pureflowBackend/place_order.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          consumer_id: user.consumer_id,
+          shop_id: shop.shop_id,
+          container_id: product.container_id,
+          quantity: quantity,
+          price: price,
+          total_price: price * quantity,
+        }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        Alert.alert('Order Placed', 'Your order has been sent to the distributor.');
+        setModalVisible(false);
+        navigation.navigate('ConsumerDB');
+      } else {
+        Alert.alert('Order Failed', result.error || 'Could not place order.');
+      }
+    } catch (error) {
+      Alert.alert('Network Error', 'Unable to connect to the server.');
+    }
   };
 
   return (
@@ -37,37 +65,40 @@ export default function CartCheckoutScreen({ route }) {
         <View style={styles.cartCard}>
           <View style={styles.shopRow}>
             <FontAwesome5 name="store" size={28} color="#3FE0E8" style={{ marginRight: 8 }} />
-            <Text style={styles.shopName}>Shop Name</Text>
+            <Text style={styles.shopName}>{shop?.shop_name || product?.shop || 'Shop Name'}</Text>
           </View>
-          {quantities.map((c, idx) => (
-            <View key={c.name} style={styles.itemRow}>
-              <Image source={c.img} style={styles.itemImg} />
+          {product && (
+            <View style={styles.itemRow}>
+              <Image source={product.image || require('../assets/Gallons.jpg')} style={styles.itemImg} />
               <View style={styles.itemInfo}>
-                <Text style={styles.itemName}>{c.name}</Text>
-                <Text style={styles.itemPrice}>Refill price: {c.price}</Text>
+                <Text style={styles.itemName}>{product.container || product.Container_Name || 'Container'}</Text>
+                {product.container_type && (
+                  <Text style={styles.itemType}>Type: {product.container_type}</Text>
+                )}
+                <Text style={styles.itemPrice}>Refill price: {product.price || product.refill || product.retail || 0}</Text>
               </View>
               <View style={styles.itemControls}>
                 <Text style={styles.delivery}>Normal delivery</Text>
                 <View style={styles.qtyWrap}>
-                  <TouchableOpacity style={styles.qtyBtn} onPress={() => handleQty(idx, 1)}>
+                  <TouchableOpacity style={styles.qtyBtn} onPress={() => setQuantity(quantity + 1)}>
                     <Text style={styles.qtyBtnText}>+</Text>
                   </TouchableOpacity>
-                  <Text style={styles.qtyNum}>{c.qty}</Text>
-                  <TouchableOpacity style={styles.qtyBtn} onPress={() => handleQty(idx, -1)}>
+                  <Text style={styles.qtyNum}>{quantity}</Text>
+                  <TouchableOpacity style={styles.qtyBtn} onPress={() => setQuantity(Math.max(1, quantity - 1))}>
                     <Text style={styles.qtyBtnText}>-</Text>
                   </TouchableOpacity>
                 </View>
-                <Text style={styles.price}>Price: {c.price * c.qty}</Text>
+                <Text style={styles.price}>Price: {total}</Text>
               </View>
             </View>
-          ))}
+          )}
           <View style={styles.divider} />
           <Text style={styles.address}>Address: {address}</Text>
           <Text style={styles.address}>Maps: {map}</Text>
           <View style={styles.bottomRow}>
             <TouchableOpacity style={styles.changeBtn} onPress={() => setAddressModalVisible(true)}><Text style={styles.changeText}>Change</Text></TouchableOpacity>
             <Text style={styles.total}>Total price: {total}</Text>
-            <TouchableOpacity style={styles.confirmBtn} onPress={() => setModalVisible(true)}><Text style={styles.confirmText}>Confirm</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.confirmBtn} onPress={handleConfirmOrder}><Text style={styles.confirmText}>Confirm</Text></TouchableOpacity>
           </View>
         </View>
       </ScrollView>
@@ -83,7 +114,7 @@ export default function CartCheckoutScreen({ route }) {
               <AntDesign name="close" size={32} color="#222" />
             </TouchableOpacity>
             <Text style={styles.modalText}>Order Number: {orderNumber}</Text>
-            <Text style={styles.modalText}>Items Ordered: {quantities.map(q => `${q.name} (x${q.qty})`).join(', ')}</Text>
+            <Text style={styles.modalText}>Items Ordered: {(product?.container || product?.Container_Name || 'Container') + ' (x' + quantity + ')'}</Text>
             <Text style={styles.modalText}>Total Amount: ₱{total.toFixed(2)}</Text>
             <Text style={styles.modalText}>Delivery Address: {address}</Text>
             <Text style={styles.modalText}>Estimated Delivery Time: Pending Distributor Approval</Text>
@@ -135,6 +166,11 @@ const styles = StyleSheet.create({
   itemImg: { width: 48, height: 60, borderRadius: 8, marginRight: 10 },
   itemInfo: { flex: 1, alignSelf: 'flex-start' },
   itemName: { fontSize: 16, fontWeight: 'bold', color: '#3578C9' },
+  itemType: {
+    fontSize: 14,
+    color: '#888',
+    marginBottom: 2,
+  },
   itemPrice: { fontSize: 15, color: '#222' },
   itemControls: { alignItems: 'flex-end' },
   delivery: { fontSize: 15, color: '#222', marginBottom: 4 },

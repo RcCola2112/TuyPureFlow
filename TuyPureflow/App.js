@@ -14,6 +14,7 @@ import ServicesScreen from './Consumer/ServicesScreen';
 import FollowingShopScreen from './Consumer/FollowingShopScreen';
 import ShopDetailScreen from './Consumer/ShopDetailScreen';
 import CartCheckoutScreen from './Consumer/CartCheckoutScreen';
+import ProfileScreen from './Consumer/ProfileScreen';
 
 const NAV_ITEMS = [
   { label: 'Home', onPress: () => alert('Home clicked!') },
@@ -135,6 +136,7 @@ export default function App() {
         <Stack.Screen name="ShopDetail" component={ShopDetailScreen} />
         <Stack.Screen name="CartCheckout" component={CartCheckoutScreen} />
         <Stack.Screen name="DistributorLoginScreen" component={require('./DistributorLogin/DistributorLoginScreen').default} />
+        <Stack.Screen name="Profile" component={ProfileScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

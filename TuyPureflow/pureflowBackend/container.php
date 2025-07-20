@@ -23,16 +23,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // ADD CONTAINER
     if (!isset($data['action'])) {
-        if (!isset($data['shop_id']) || !$containerName || !isset($data['type']) || !isset($data['price'])) {
-            echo json_encode(['error' => 'Missing required fields: shop_id, Container_Name, type, price']);
+        if (!isset($data['shop_id']) || !$containerName || !isset($data['container_type']) || !isset($data['price'])) {
+            echo json_encode(['error' => 'Missing required fields: shop_id, Container_Name, container_type, price']);
             exit;
         }
         try {
-            $stmt = $pdo->prepare("INSERT INTO container (shop_id, Container_Name, type, price, stock_quantity, damaged_quantity) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt = $pdo->prepare("INSERT INTO container (shop_id, Container_Name, container_type, price, stock_quantity, damaged_quantity) VALUES (?, ?, ?, ?, ?, ?)");
             $stmt->execute([
                 $data['shop_id'],
                 $containerName,
-                $data['type'],
+                $data['container_type'],
                 $data['price'],
                 $data['stock_quantity'] ?? 0,
                 $data['damaged_quantity'] ?? 0
@@ -88,15 +88,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     $data = json_decode(file_get_contents('php://input'), true);
     $containerName = isset($data['Container_Name']) ? $data['Container_Name'] : (isset($data['name']) ? $data['name'] : null);
-    if (!isset($data['container_id']) || !$containerName || !isset($data['type']) || !isset($data['price'])) {
-        echo json_encode(['error' => 'Missing required fields: container_id, Container_Name, type, price']);
+    if (!isset($data['container_id']) || !$containerName || !isset($data['container_type']) || !isset($data['price'])) {
+        echo json_encode(['error' => 'Missing required fields: container_id, Container_Name, container_type, price']);
         exit;
     }
     try {
-        $stmt = $pdo->prepare("UPDATE container SET Container_Name = ?, type = ?, price = ?, stock_quantity = ?, damaged_quantity = ? WHERE container_id = ?");
+        $stmt = $pdo->prepare("UPDATE container SET Container_Name = ?, container_type = ?, price = ?, stock_quantity = ?, damaged_quantity = ? WHERE container_id = ?");
         $stmt->execute([
             $containerName,
-            $data['type'],
+            $data['container_type'],
             $data['price'],
             $data['stock_quantity'] ?? 0,
             $data['damaged_quantity'] ?? 0,
