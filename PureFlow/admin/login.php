@@ -2,40 +2,22 @@
 session_start();
 include '../db.php';
 
-// Enable error reporting for development
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $login = trim($_POST['login'] ?? '');
     $password = $_POST['password'] ?? '';
 
-    // Fetch distributor by username or email
-    $stmt = $conn->prepare("SELECT * FROM distributor WHERE email = ?");
-    $stmt->execute([$login]);
-    $distributor = $stmt->fetch();
+    // Fetch admin by username or email
+    $stmt = $conn->prepare("SELECT * FROM admin WHERE username = ? OR email = ?");
+    $stmt->execute([$login, $login]);
+    $admin = $stmt->fetch();
 
-    if ($distributor && password_verify($password, $distributor['password'])) {
-        // Check if distributor is approved
-        if ($distributor['status'] === 'Pending') {
-            $error = "Your account is waiting to be approved by the admin.";
-        } else {
-            $_SESSION['distributor_id'] = $distributor['distributor_id'];
-            $_SESSION['distributor_name'] = $distributor['username'];
-
-            // If you have a shop table linked to distributor
-            $shopStmt = $conn->prepare("SELECT name FROM shop WHERE distributor_id = ?");
-            $shopStmt->execute([$distributor['distributor_id']]);
-            $shop = $shopStmt->fetch(PDO::FETCH_ASSOC);
-            $_SESSION['shop_name'] = $shop ? $shop['name'] : '';
-
-            // Redirect to dashboard
-            header("Location: dashboard.php");
-            exit;
-        }
+    if ($admin && password_verify($password, $admin['password'])) {
+        $_SESSION['admin_id'] = $admin['admin_id'];
+        $_SESSION['admin_name'] = $admin['username'];
+        header('Location: dashboard.php');
+        exit;
     } else {
         $error = "Invalid username/email or password.";
     }
@@ -45,12 +27,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Distributor Login - Tuy PureFlow</title>
+  <title>Admin Login - Tuy PureFlow</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen">
   <form method="POST" class="bg-white p-8 rounded shadow-md w-full max-w-sm">
-    <h1 class="text-2xl font-bold mb-6 text-blue-600 text-center">Distributor Login</h1>
+    <h1 class="text-2xl font-bold mb-6 text-blue-600 text-center">Admin Login</h1>
     <?php if ($error): ?>
       <div class="mb-4 text-red-500 text-center"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>

@@ -1,6 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+  // Force redirect to index.html if accessed via back navigation after logout
+  if (performance && performance.navigation && performance.navigation.type === 2) {
+    window.location.replace('index.html');
+  }
+  // For modern browsers using PerformanceNavigationTiming
+  if (performance && performance.getEntriesByType) {
+    var navEntries = performance.getEntriesByType('navigation');
+    if (navEntries.length && navEntries[0].type === 'back_forward') {
+      window.location.replace('index.html');
+    }
+  }
+</script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tuy PureFlow Landing Page</title>
@@ -15,7 +28,7 @@
         
         <!-- Logo -->
         <div class="flex items-center space-x-2">
-          <img src="your-logo.png" alt="Tuy PureFlow Logo" class="h-10 w-auto">
+          <img src="images/logo.png" alt="Tuy PureFlow Logo" class="h-10 w-auto">
           <span class="font-bold text-xl text-blue-600">Tuy PureFlow</span>
         </div>
 

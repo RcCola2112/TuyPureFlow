@@ -1,6 +1,9 @@
 <?php
 // notification.php
 session_start();
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Pragma: no-cache");
+header("Expires: Sat, 1 Jan 2000 00:00:00 GMT");
 include '../db.php';
 
 if (!isset($_SESSION['consumer_id'])) {

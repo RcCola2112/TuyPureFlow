@@ -1,6 +1,9 @@
 <?php
 // shop_page.php
 session_start();
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Pragma: no-cache");
+header("Expires: Sat, 1 Jan 2000 00:00:00 GMT");
 include '../db.php';
 
 // Get shop_id from URL
@@ -15,6 +18,14 @@ $station = $stmt->fetch();
 $stmt = $conn->prepare("SELECT * FROM container WHERE shop_id = ?");
 $stmt->execute([$shop_id]);
 $products = $stmt->fetchAll();
+
+// Fetch average rating for the shop
+$stmt = $conn->prepare("SELECT AVG(rating) AS avg_rating, COUNT(*) AS total_ratings FROM ratings WHERE shop_id = ?");
+$stmt->execute([$shop_id]);
+$ratingData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+$avg_rating = $ratingData['avg_rating'] ? round($ratingData['avg_rating'], 2) : 'No ratings yet';
+$total_ratings = $ratingData['total_ratings'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -70,13 +81,22 @@ $products = $stmt->fetchAll();
         <div class="flex items-center gap-2 mt-1">
           <span class="text-yellow-500">
             <?php
-              $rating = round($station['rating'] ?? 4);
-              for ($i = 0; $i < 5; $i++) {
-                echo $i < $rating ? '★' : '☆';
+              if ($total_ratings > 0) {
+                for ($i = 0; $i < 5; $i++) {
+                  echo $i < round($avg_rating) ? '★' : '☆';
+                }
+              } else {
+                echo '☆☆☆☆☆';
               }
             ?>
           </span>
-          <span class="text-sm text-gray-500"><?= number_format($station['rating'] ?? 4.0, 1) ?> (<?= $station['reviews'] ?? 0 ?> reviews)</span>
+          <span class="text-sm text-gray-500">
+            <?php if ($total_ratings > 0): ?>
+              <?= $avg_rating ?>/5 (<?= $total_ratings ?> ratings)
+            <?php else: ?>
+              No ratings yet
+            <?php endif; ?>
+          </span>
         </div>
         <div class="mt-2 text-sm text-gray-600">
           <p>Operating Hours: <?= htmlspecialchars($station['hours'] ?? '08:00 AM - 05:00 PM') ?></p>
@@ -103,23 +123,32 @@ $products = $stmt->fetchAll();
         <form method="POST" action="cart.php">
           <input type="hidden" name="shop_id" value="<?= $shop_id ?>">
           <input type="hidden" name="container_id" value="<?= $product['container_id'] ?>">
-          <input type="hidden" name="name" value="<?= htmlspecialchars($product['name'] ?? 'Container') ?>">
-          <input type="hidden" name="price" value="<?= $product['price'] ?? 0 ?>">
-          <img src="<?= htmlspecialchars($product['image_url'] ?? 'https://via.placeholder.com/300x150') ?>" alt="<?= htmlspecialchars($product['name'] ?? 'Container') ?>" class="w-full h-32 object-cover rounded">
-          <h3 class="text-md font-semibold mt-3"><?= htmlspecialchars($product['name'] ?? 'Container') ?></h3>
-          <p class="text-gray-600 text-sm">₱<?= isset($product['price']) ? number_format($product['price'], 2) : 'N/A' ?></p>
-          <p class="text-gray-500 text-xs">In Stock: <?= htmlspecialchars($product['stock'] ?? 'N/A') ?></p>
+          <input type="hidden" name="name" value="<?= htmlspecialchars($product['type'] ?? 'Container') ?>">
+          <input type="hidden" name="price_new" value="<?= isset($product['price_new']) && $product['price_new'] > 0 ? $product['price_new'] : 0 ?>">
+          <input type="hidden" name="price_refill" value="<?= isset($product['price_refill']) && $product['price_refill'] > 0 ? $product['price_refill'] : 0 ?>">
+          <input type="hidden" name="price" id="price<?= $product['container_id'] ?>" value="<?= isset($product['price_new']) && $product['price_new'] > 0 ? $product['price_new'] : 0 ?>">
+          <img src="<?= htmlspecialchars($product['image_url'] ?? 'https://via.placeholder.com/300x150') ?>" alt="<?= htmlspecialchars($product['type'] ?? 'Container') ?>" class="w-full h-32 object-cover rounded">
+          <h3 class="text-md font-semibold mt-3"><?= htmlspecialchars($product['type'] ?? 'Container') ?></h3>
+          <p class="text-gray-600 text-sm">
+            Price: <span id="displayPrice<?= $product['container_id'] ?>">
+              <?php
+                $show_price = isset($product['price_new']) && $product['price_new'] > 0 ? number_format($product['price_new'], 2) : (isset($product['price_refill']) && $product['price_refill'] > 0 ? number_format($product['price_refill'], 2) : 'N/A');
+                echo '₱' . $show_price;
+              ?>
+            </span>
+          </p>
+          <p class="text-gray-500 text-xs">In Stock: <?= isset($product['stock_quantity']) ? htmlspecialchars($product['stock_quantity']) : (isset($product['stock']) ? htmlspecialchars($product['stock']) : 'N/A') ?></p>
           <div class="flex flex-col gap-2 mt-3">
             <div class="flex items-center gap-2">
               <label for="qty<?= $product['container_id'] ?>" class="text-sm">Qty:</label>
               <?php
-                $max_stock = (isset($product['stock']) && $product['stock'] > 0) ? intval($product['stock']) : 99;
+                $max_stock = (isset($product['stock_quantity']) && $product['stock_quantity'] > 0) ? intval($product['stock_quantity']) : ((isset($product['stock']) && $product['stock'] > 0) ? intval($product['stock']) : 99);
               ?>
               <input id="qty<?= $product['container_id'] ?>" name="qty" type="number" min="1" max="<?= $max_stock ?>" value="1" class="w-16 text-center border rounded py-1">
             </div>
             <div class="flex items-center gap-2">
               <label for="option<?= $product['container_id'] ?>" class="text-sm">Option:</label>
-              <select id="option<?= $product['container_id'] ?>" name="option" class="border rounded py-1 px-2 text-sm">
+              <select id="option<?= $product['container_id'] ?>" name="option" class="border rounded py-1 px-2 text-sm" onchange="updatePrice(<?= $product['container_id'] ?>)">
                 <option value="with-container">With Container</option>
                 <option value="refill-only">Refill Only</option>
               </select>
@@ -150,6 +179,28 @@ $products = $stmt->fetchAll();
       const widget = document.getElementById('messageWidget');
       widget.classList.toggle('translate-x-full');
     }
+    // Update price based on option
+    function updatePrice(containerId) {
+      var option = document.getElementById('option' + containerId).value;
+      var form = document.getElementById('option' + containerId).form;
+      var priceNewVal = parseFloat(form.querySelector('input[name="price_new"]').value) || 0;
+      var priceRefillVal = parseFloat(form.querySelector('input[name="price_refill"]').value) || 0;
+      var priceInput = document.getElementById('price' + containerId);
+      var displayPrice = document.getElementById('displayPrice' + containerId);
+      if (option === 'with-container') {
+        priceInput.value = priceNewVal;
+        displayPrice.textContent = priceNewVal > 0 ? '₱' + priceNewVal.toFixed(2) : '₱N/A';
+      } else {
+        priceInput.value = priceRefillVal;
+        displayPrice.textContent = priceRefillVal > 0 ? '₱' + priceRefillVal.toFixed(2) : '₱N/A';
+      }
+    }
+    // Initialize all prices on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      <?php foreach ($products as $product): ?>
+        updatePrice(<?= $product['container_id'] ?>);
+      <?php endforeach; ?>
+    });
   </script>
 </body>
 </html>

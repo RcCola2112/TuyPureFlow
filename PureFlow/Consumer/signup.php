@@ -6,14 +6,15 @@ $error = '';
 $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name = trim($_POST['name'] ?? '');
+    $full_name = trim($_POST['full_name'] ?? '');
     $email = trim($_POST['email'] ?? '');
-    $phone = trim($_POST['phone'] ?? '');
+    $contact_number = trim($_POST['contact_number'] ?? '');
+    $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
     $confirm = $_POST['confirm'] ?? '';
 
     // Basic validation
-    if (!$name || !$email || !$phone || !$password || !$confirm) {
+    if (!$full_name || !$email || !$contact_number || !$username || !$password || !$confirm) {
         $error = "All fields are required.";
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = "Invalid email address.";
@@ -28,8 +29,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             // Hash password and insert new consumer
             $hashed = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $conn->prepare("INSERT INTO consumer (name, email, phone, password) VALUES (?, ?, ?, ?)");
-            if ($stmt->execute([$name, $email, $phone, $hashed])) {
+            $stmt = $conn->prepare("INSERT INTO consumer (full_name, email, contact_number, username, password, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
+            if ($stmt->execute([$full_name, $email, $contact_number, $username, $hashed])) {
                 $success = "Account created! You can now <a href='login.php' class='text-blue-600 underline'>login</a>.";
             } else {
                 $error = "Registration failed. Please try again.";
@@ -55,24 +56,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <div class="mb-4 text-green-600 text-center"><?= $success ?></div>
     <?php endif; ?>
     <div class="mb-4">
-      <label class="block mb-1 text-sm font-medium">Name</label>
-      <input type="text" name="name" required class="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" value="<?= htmlspecialchars($_POST['name'] ?? '') ?>">
+      <label class="block mb-1 text-sm font-medium">Full Name</label>
+      <input type="text" name="full_name" placeholder="Full Name *" required class="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" value="<?= htmlspecialchars($_POST['full_name'] ?? '') ?>">
     </div>
     <div class="mb-4">
       <label class="block mb-1 text-sm font-medium">Email</label>
-      <input type="email" name="email" required class="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" value="<?= htmlspecialchars($_POST['email'] ?? '') ?>">
+      <input type="email" name="email" placeholder="Email Address *" required class="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" value="<?= htmlspecialchars($_POST['email'] ?? '') ?>">
     </div>
     <div class="mb-4">
-      <label class="block mb-1 text-sm font-medium">Phone Number</label>
-      <input type="text" name="phone" required class="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" value="<?= htmlspecialchars($_POST['phone'] ?? '') ?>">
+      <label class="block mb-1 text-sm font-medium">Contact Number</label>
+      <input type="text" name="contact_number" placeholder="Contact Number *" required maxlength="11" class="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" value="<?= htmlspecialchars($_POST['contact_number'] ?? '') ?>">
+    </div>
+    <div class="mb-4">
+      <label class="block mb-1 text-sm font-medium">Username</label>
+      <input type="text" name="username" placeholder="Username *" required class="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" value="<?= htmlspecialchars($_POST['username'] ?? '') ?>">
     </div>
     <div class="mb-4">
       <label class="block mb-1 text-sm font-medium">Password</label>
-      <input type="password" name="password" required class="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <input type="password" name="password" placeholder="Password *" required class="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
     </div>
     <div class="mb-6">
       <label class="block mb-1 text-sm font-medium">Confirm Password</label>
-      <input type="password" name="confirm" required class="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <input type="password" name="confirm" placeholder="Confirm Password *" required class="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
     </div>
     <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-semibold">Sign Up</button>
     <p class="mt-4 text-center text-sm">Already have an account? <a href="login.php" class="text-blue-600 hover:underline">Login</a></p>

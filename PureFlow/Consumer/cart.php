@@ -1,9 +1,12 @@
 <?php
 session_start();
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Pragma: no-cache");
+header("Expires: Sat, 1 Jan 2000 00:00:00 GMT");
 include '../db.php';
 
 if (!isset($_SESSION['consumer_id'])) {
-    header('Location: login.php');
+    echo '<script>window.location.replace("../index.html");</script>';
     exit;
 }
 $user_id = $_SESSION['consumer_id'];
@@ -93,7 +96,7 @@ foreach ($cart_items as $item) {
   <main class="container mx-auto px-4 py-8">
     <h1 class="text-2xl font-bold mb-6">My Cart</h1>
 
-    <form method="POST" action="cart.php" id="cartForm">
+    <form method="POST" action="confirm_order.php" id="cartForm">
       <div class="bg-white rounded-lg shadow p-6">
         <?php foreach ($grouped_cart as $shop): ?>
         <div class="mb-8">
@@ -151,7 +154,7 @@ foreach ($cart_items as $item) {
             </div>
             <button type="submit" class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg"
               onclick="return !window.deleteClicked;">Proceed to Checkout</button>
-            <button type="submit" name="delete_selected" class="mt-2 w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg"
+            <button type="submit" name="delete_selected" formaction="cart.php" class="mt-2 w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg"
               onclick="return confirm('Are you sure you want to delete these items in your cart?');">Delete Selected</button>
           </div>
         </div>
