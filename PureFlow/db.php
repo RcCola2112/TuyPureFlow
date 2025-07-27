@@ -2,9 +2,9 @@
 // db.php
 
 $host = '127.0.0.1';
-$db = 'pureflow';
-$user = 'root';
-$pass = ''; 
+$db = 'u549992181_DB_TuyPureFlow';
+$user = 'u549992181_Arciee';
+$pass = 'TuyPureFlow_Capstone_2025'; 
 $charset = 'utf8mb4';
 
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";

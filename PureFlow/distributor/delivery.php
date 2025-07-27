@@ -1,5 +1,12 @@
 <?php
 session_start();
+if (!isset($_SESSION['distributor_id'])) {
+    echo '<script>window.location.replace("../index.html");</script>';
+    exit;
+}
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Pragma: no-cache");
+header("Expires: Sat, 1 Jan 2000 00:00:00 GMT");
 include '../db.php';
 $currentPage = 'delivery';
 
@@ -31,14 +38,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delivery_id'], $_POST
 
 // Fetch waiting deliveries (approved orders not yet delivered)
 $stmt = $conn->prepare(
-    "SELECT dr.*, o.order_id, o.status AS order_status, c.name AS customer_name, s.name AS shop_name
+    "SELECT dr.*, o.order_id, o.status AS order_status, c.full_name AS customer_name, s.name AS shop_name
      FROM delivery_record dr
      JOIN orders o ON dr.order_id = o.order_id
      JOIN consumer c ON o.consumer_id = c.consumer_id
      JOIN shop s ON o.shop_id = s.shop_id
      WHERE o.shop_id IN (SELECT shop_id FROM shop WHERE distributor_id = ?)
        AND o.status = 'Approved'
-       AND dr.status = 'Scheduled'
+       AND dr.delivery_status = 'Scheduled'
      ORDER BY dr.delivery_date DESC"
 );
 $stmt->execute([$distributor_id]);
@@ -46,13 +53,13 @@ $deliveries = $stmt->fetchAll();
 
 // Fetch ongoing deliveries (In Transit)
 $stmt2 = $conn->prepare(
-    "SELECT dr.*, o.order_id, o.status AS order_status, c.name AS customer_name, s.name AS shop_name
+    "SELECT dr.*, o.order_id, o.status AS order_status, c.full_name AS customer_name, s.name AS shop_name
      FROM delivery_record dr
      JOIN orders o ON dr.order_id = o.order_id
      JOIN consumer c ON o.consumer_id = c.consumer_id
      JOIN shop s ON o.shop_id = s.shop_id
      WHERE o.shop_id IN (SELECT shop_id FROM shop WHERE distributor_id = ?)
-       AND dr.status = 'In Transit'
+       AND dr.delivery_status = 'In Transit'
      ORDER BY dr.delivery_date DESC"
 );
 $stmt2->execute([$distributor_id]);
@@ -65,7 +72,9 @@ $ongoing_deliveries = $stmt2->fetchAll();
   <title>Delivery Management</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Add your map library here if needed -->
-  <script src="https://cdn.blightmap.com/js/blightmap.min.js"></script>
+  <!-- Leaflet OpenStreetMap -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body class="flex bg-gray-100">
   <!-- Sidebar -->
@@ -170,15 +179,14 @@ $ongoing_deliveries = $stmt2->fetchAll();
         var deliveryId = this.querySelector('input[name="delivery_id"]').value;
         document.getElementById('mapSection').classList.remove('hidden');
         document.getElementById('map_delivery_id').value = deliveryId;
-        // Initialize map (replace with your map logic)
+        // Initialize Leaflet map
         if (window.deliveryMapInstance) return;
-        window.deliveryMapInstance = new BlightMap.Map({
-          apiKey: "YOUR_API_KEY",
-          container: "deliveryMap",
-          center: [13.8602, 120.7335], // Default Tuy, Batangas
-          zoom: 13
-        });
-        // Optionally add route, marker, etc.
+        window.deliveryMapInstance = L.map('deliveryMap').setView([13.8602, 120.7335], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '© OpenStreetMap'
+        }).addTo(window.deliveryMapInstance);
+        // Optionally add marker, route, etc.
       });
     });
 

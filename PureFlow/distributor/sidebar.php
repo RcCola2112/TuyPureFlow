@@ -12,7 +12,7 @@ if (!function_exists('isActive')) {
     
     <!-- Logo -->
     <div class="p-6 text-center border-b border-gray-200">
-      <img src="images/your-logo.png" class="h-10 mx-auto mb-2" alt="Logo">
+      <img src="../images/logo.png" class="h-20 mx-auto mb-2" alt="Logo">
       <span class="font-bold text-blue-600 text-xl">Tuy PureFlow</span>
     </div>
 

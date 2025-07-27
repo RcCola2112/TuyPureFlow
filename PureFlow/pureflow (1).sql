@@ -30,12 +30,16 @@ SET time_zone = "+00:00";
 CREATE TABLE `address` (
   `address_id` int(11) NOT NULL,
   `consumer_id` int(11) DEFAULT NULL,
+  `name` varchar(255) NOT NULL,
+  `contact_number` varchar(20) NOT NULL,
   `street` varchar(255) NOT NULL,
+  `barangay` varchar(255) NOT NULL,
   `city` varchar(255) NOT NULL,
   `province` varchar(100) NOT NULL,
   `zip_code` varchar(10) NOT NULL,
   `latitude` decimal(10,7) DEFAULT NULL,
-  `longitude` decimal(10,7) DEFAULT NULL
+  `longitude` decimal(10,7) DEFAULT NULL,
+  `is_default` TINYINT(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------

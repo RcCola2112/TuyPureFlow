@@ -1,8 +1,8 @@
 <?php
 // Ensure $username, $shopname, and $profilePic are set
-$username = $username ?? "Juan Dela Cruz";
-$shopname = $shopname ?? "Tuy Aqua Station";
-$profilePic = $profilePic ?? "images/profile.jpg";
+$username = $username ?? "User Name";
+$shopname = $shopname ?? "Shop Name";
+$profilePic = $profilePic ?? "images/default-profile.jpg";
 ?>
 
 <header class="bg-white shadow px-6 py-4 flex items-center justify-between">

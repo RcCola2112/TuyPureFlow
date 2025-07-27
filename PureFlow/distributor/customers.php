@@ -1,5 +1,15 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 session_start();
+if (!isset($_SESSION['distributor_id'])) {
+    echo '<script>window.location.replace("../index.html");</script>';
+    exit;
+}
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Pragma: no-cache");
+header("Expires: Sat, 1 Jan 2000 00:00:00 GMT");
 include '../db.php';
 $currentPage = 'customers';
 
@@ -17,9 +27,9 @@ $profilePic = isset($distributor['profile_pic']) && $distributor['profile_pic'] 
 
 // Fetch customers who ordered from this distributor's shop(s)
 $stmt = $conn->prepare(
-  "SELECT c.name, c.phone, c.email,
+  "SELECT c.full_name, c.contact_number, c.email,
     COUNT(o.order_id) AS total_orders,
-    MAX(o.created_at) AS last_order
+    MAX(o.order_date) AS last_order
    FROM consumer c
    JOIN orders o ON c.consumer_id = o.consumer_id
    WHERE o.shop_id IN (SELECT shop_id FROM shop WHERE distributor_id = ?)
@@ -61,8 +71,8 @@ $customers = $stmt->fetchAll();
         <tbody class="bg-white divide-y divide-gray-200">
           <?php foreach ($customers as $c): ?>
           <tr>
-            <td class="px-6 py-4 whitespace-nowrap"><?= htmlspecialchars($c['name']) ?></td>
-            <td class="px-6 py-4 whitespace-nowrap"><?= htmlspecialchars($c['phone']) ?></td>
+            <td class="px-6 py-4 whitespace-nowrap"><?= htmlspecialchars($c['full_name']) ?></td>
+            <td class="px-6 py-4 whitespace-nowrap"><?= htmlspecialchars($c['contact_number']) ?></td>
             <td class="px-6 py-4 whitespace-nowrap"><?= htmlspecialchars($c['total_orders']) ?></td>
             <td class="px-6 py-4 whitespace-nowrap"><?= date('M d, Y', strtotime($c['last_order'])) ?></td>
           </tr>

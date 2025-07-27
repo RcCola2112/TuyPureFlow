@@ -1,9 +1,20 @@
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 session_start();
+if (!isset($_SESSION['distributor_id'])) {
+    echo '<script>window.location.replace("../index.html");</script>';
+    exit;
+}
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Pragma: no-cache");
+header("Expires: Sat, 1 Jan 2000 00:00:00 GMT");
 include '../db.php';
 $currentPage = 'settings';
 
 // Get distributor info from session or database
+
 $distributor_id = $_SESSION['distributor_id'] ?? 1;
 $stmt = $conn->prepare("SELECT * FROM distributor WHERE distributor_id = ?");
 $stmt->execute([$distributor_id]);
@@ -58,6 +69,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_account'])) {
     // Refresh distributor info
     $stmt = $conn->prepare("SELECT * FROM distributor WHERE distributor_id = ?");
     $stmt->execute([$distributor_id]);
+// Fetch distributor info
+$stmt = $conn->prepare("SELECT * FROM distributor WHERE distributor_id = ?");
+$stmt->execute([$distributor_id]);
+$distributor = $stmt->fetch();
+
+$business_name = $distributor['business_name'] ?? '';
+$owner_name = $distributor['owner_name'] ?? '';
+$contact_number = $distributor['contact_number'] ?? '';
+$email = $distributor['email'] ?? '';
+$open_time = $distributor['open_time'] ?? '';
+$close_time = $distributor['close_time'] ?? '';
+
+$update_msg = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_account'])) {
+    $new_business_name = trim($_POST['business_name'] ?? '');
+    $new_owner_name = trim($_POST['owner_name'] ?? '');
+    $new_contact_number = trim($_POST['contact_number'] ?? '');
+    $new_email = trim($_POST['email'] ?? '');
+    $new_open_time = trim($_POST['open_time'] ?? '');
+    $new_close_time = trim($_POST['close_time'] ?? '');
+
+    if (!$new_business_name || !$new_owner_name || !$new_contact_number || !$new_email) {
+        $update_msg = "Business name, owner name, contact number, and email are required.";
+    } elseif (!filter_var($new_email, FILTER_VALIDATE_EMAIL)) {
+        $update_msg = "Invalid email address.";
+    } else {
+        $stmt = $conn->prepare("UPDATE distributor SET business_name = ?, owner_name = ?, contact_number = ?, email = ?, open_time = ?, close_time = ? WHERE distributor_id = ?");
+        $success = $stmt->execute([$new_business_name, $new_owner_name, $new_contact_number, $new_email, $new_open_time, $new_close_time, $distributor_id]);
+        if ($success) {
+            $update_msg = "Account updated successfully!";
+        } else {
+            $update_msg = "Update failed.";
+        }
+    }
+    // Refresh distributor info
+    $stmt = $conn->prepare("SELECT * FROM distributor WHERE distributor_id = ?");
+    $stmt->execute([$distributor_id]);
+    $distributor = $stmt->fetch();
+    $business_name = $distributor['business_name'] ?? '';
+    $owner_name = $distributor['owner_name'] ?? '';
+    $contact_number = $distributor['contact_number'] ?? '';
+    $email = $distributor['email'] ?? '';
+    $open_time = $distributor['open_time'] ?? '';
+    $close_time = $distributor['close_time'] ?? '';
+}
     $distributor = $stmt->fetch();
     $username = $distributor['name'] ?? "Juan Dela Cruz";
     $shopname = $_SESSION['shop_name'] ?? "Tuy Aqua Station";
@@ -92,7 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_account'])) {
             <h2 class="text-lg font-semibold text-gray-700 mb-2">Account Information</h2>
             <div>
               <label class="block text-sm text-gray-600">Full Name</label>
-              <input type="text" name="name" value="<?= htmlspecialchars($username) ?>" class="w-full mt-1 p-2 border rounded">
+              <input type="text" name="name" value="<?= htmlspecialchars($distributor['name'] ?? '') ?>" class="w-full mt-1 p-2 border rounded">
             </div>
             <div>
               <label class="block text-sm text-gray-600">Email Address</label>

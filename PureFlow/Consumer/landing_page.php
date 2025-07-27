@@ -3,8 +3,8 @@
 session_start();
 include '../db.php';
 
-// Fetch water stations
-$stmt = $conn->query("SELECT * FROM shop");
+// Fetch only shops whose distributor is approved
+$stmt = $conn->query("SELECT s.* FROM shop s JOIN distributor d ON s.distributor_id = d.distributor_id WHERE d.status = 'Approved'");
 $stations = $stmt->fetchAll();
 ?>
 <!DOCTYPE html>

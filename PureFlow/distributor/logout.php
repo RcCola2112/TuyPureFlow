@@ -4,6 +4,7 @@ session_start();
 session_unset();
 session_destroy();
 // Redirect to distributor login page
-header('Location: login.php');
+echo '<script>window.location.replace("../index.html");</script>';
+exit;
 exit;
 ?>
