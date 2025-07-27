@@ -84,8 +84,6 @@ Key System Functions: Real-time order placement and tracking
     Notifications and alerts via SMS and push
 	
     Feedback and support system
-	
-    Report generation and analytics
 
 Add use case characteristics and other diagrams
 
@@ -110,6 +108,7 @@ The system relies on internet connectivity for real-time operations and data syn
 Only supports Android in its initial release; iOS version will be developed later.
 
 Dependent on the availability of third-party APIs (e.g., Google Maps, Zoho, OneSignal) which may impose usage limits or require fees.
+
 Limitations:
 
 Deployment and evaluation are limited to Tuy, Batangas; findings may not generalize to other locations.
@@ -117,6 +116,7 @@ Deployment and evaluation are limited to Tuy, Batangas; findings may not general
 The mobile app requires modern smartphones; outdated devices may experience performance issues.
 		
 Notifications may fail if users disable app permissions or have unstable mobile networks.
+
 Dependencies:
 
 Zoho Inventory API for real-time inventory alerts and stock monitoring.
@@ -128,6 +128,7 @@ MySQL for relational database management.
 Auth0 for secure OAuth 2.0-based authentication.
 		
 Agile methodology for iterative development and continuous feedback integration.
+
 Specific Requirements
 
 System Features
@@ -143,13 +144,14 @@ Inventory Management- Distributors can monitor stock levels and get alerts when 
 	
 Delivery Assignment- Distributors can assign delivery staff to orders and update delivery statuses.
 	
-Notifications and Alerts- Users receive updates through SMS and push notifications (e.g., order confirmation, delivery time).
+Notifications and Alerts- Users receive updates through SMS and push notifications.
 	
 Feedback and Reporting- Customers can give feedback or report issues directly through the app.
 	
 Sales and Demand Analytics- Distributors and admins can view reports about sales, popular products, and delivery performance.
 	
-Admin Dashboard- Admins can manage users, monitor activity, and generate reports.
+Admin Dashboard- Admins can manage users and monitor activity.
+
 Interface Requirements
 
 Mobile Application Interface (For Customers Simple and clean layout
@@ -162,7 +164,7 @@ Feedback form
 
 Responsive design for various phone screen sizes
 
-Web Application Interface (For Distributors/Admins)
+Web Application Interface (For Distributors/Admins and also consumers)
 
 Dashboard with quick stats (orders, inventory, deliveries)
 
@@ -172,7 +174,6 @@ Interactive map for delivery tracking
 
 Login and role-based access
 
-Exportable reports (PDF, Excel)
 
 Non-Functional Requirements
 
@@ -181,11 +182,13 @@ Performance
 System should load pages within 3 seconds on stable internet
    
 Mobile app should work smoothly on devices with at least 2GB RAM
+
 Reliability
 
 System should operate 24/7 with minimal downtime
 	
 Auto-recovery in case of failure (e.g., retry sending notifications)
+
 Security
 
 All user data must be encrypted (SSL/TLS)
@@ -193,15 +196,19 @@ All user data must be encrypted (SSL/TLS)
 Passwords stored securely using hashing
 	
 Role-based access (users only see features they are allowed to use)
+
 Scalability
 
 System should be able to handle more users and deliveries as needed in the future
+
 Usability
 
 Interfaces must be easy to use for both tech-savvy and non-tech users
 	
 Use icons, tooltips, and simple words
+
 Other Requirements
+
 Internet Connection
 
 Required for both mobile and web systems to work properly
@@ -211,11 +218,13 @@ Supported Devices
 Mobile app: Android (minimum version 7.0 or above)
    
 Web app: Compatible with major browsers (Chrome, Firefox, Edge)
+
 Hosting and Server
 
 Uses Google Cloud Run or Hostinger for web hosting
    
 Database hosted on a secure MySQL server
+
 Third-party Services
 
   Google Maps API for delivery tracking and route guidance
