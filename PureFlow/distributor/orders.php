@@ -1,15 +1,5 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
 session_start();
-if (!isset($_SESSION['distributor_id'])) {
-    echo '<script>window.location.replace("../index.html");</script>';
-    exit;
-}
-header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
-header("Pragma: no-cache");
-header("Expires: Sat, 1 Jan 2000 00:00:00 GMT");
 include '../db.php';
 $currentPage = 'orders';
 
@@ -41,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $check = $conn->prepare("SELECT delivery_id FROM delivery_record WHERE order_id = ?");
                 $check->execute([$oid]);
                 if (!$check->fetch()) {
-                    $ins = $conn->prepare("INSERT INTO delivery_record (order_id, delivery_status) VALUES (?, 'Scheduled')");
+                    $ins = $conn->prepare("INSERT INTO delivery_record (order_id, status) VALUES (?, 'Scheduled')");
                     $ins->execute([$oid]);
                 }
             }
@@ -59,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $check = $conn->prepare("SELECT delivery_id FROM delivery_record WHERE order_id = ?");
             $check->execute([$order_id]);
             if (!$check->fetch()) {
-                $ins = $conn->prepare("INSERT INTO delivery_record (order_id, delivery_status) VALUES (?, 'Scheduled')");
+                $ins = $conn->prepare("INSERT INTO delivery_record (order_id, status) VALUES (?, 'Scheduled')");
                 $ins->execute([$order_id]);
             }
         }
@@ -69,15 +59,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Fetch all orders for this distributor's shop(s) except those with status 'Approved'
-// Use full_name from consumer table instead of first_name/last_name
-// Use correct column name for province (region) in address table
-$stmt = $conn->prepare("SELECT o.*, c.full_name AS customer_name, c.contact_number, c.email, a.street, a.city, a.region AS province, a.zip_code
+$stmt = $conn->prepare("SELECT o.*, c.name AS customer_name, c.phone, c.email, a.street, a.city, a.province, a.zip_code
   FROM orders o
   JOIN consumer c ON o.consumer_id = c.consumer_id
   LEFT JOIN address a ON c.consumer_id = a.consumer_id
   WHERE o.shop_id IN (SELECT shop_id FROM shop WHERE distributor_id = ?)
     AND o.status != 'Approved'
-  ORDER BY o.order_date DESC");
+  ORDER BY o.created_at DESC");
 $stmt->execute([$distributor_id]);
 $orders = $stmt->fetchAll();
 ?>
@@ -124,21 +112,22 @@ $orders = $stmt->fetchAll();
               </td>
               <td class="px-4 py-2"><?= htmlspecialchars($order['order_id']) ?></td>
               <td class="px-4 py-2"><?= htmlspecialchars($order['customer_name']) ?></td>
-              <td class="px-4 py-2"><?= htmlspecialchars($order['contact_number']) ?></td>
+              <td class="px-4 py-2"><?= htmlspecialchars($order['phone']) ?></td>
               <td class="px-4 py-2"><?= htmlspecialchars($order['email']) ?></td>
-              <td class="px-4 py-2"><?= htmlspecialchars($order['street'] . ', ' . $order['city'] . ', ' . $order['region'] . ' ' . $order['zip_code']) ?></td>
+              <td class="px-4 py-2"><?= htmlspecialchars($order['street'] . ', ' . $order['city'] . ', ' . $order['province'] . ' ' . $order['zip_code']) ?></td>
               <td class="px-4 py-2"><?= htmlspecialchars($order['status']) ?></td>
               <td class="px-4 py-2">
                 <form method="POST" class="inline">
                   <input type="hidden" name="order_id" value="<?= $order['order_id'] ?>">
                   <select name="single_status" class="border rounded p-1">
                     <option value="Pending" <?= $order['status'] == 'Pending' ? 'selected' : '' ?>>Pending</option>
+<body class="flex bg-gray-100">
                     <option value="Out for Delivery" <?= $order['status'] == 'Out for Delivery' ? 'selected' : '' ?>>Out for Delivery</option>
                     <option value="Completed" <?= $order['status'] == 'Completed' ? 'selected' : '' ?>>Completed</option>
                     <option value="Cancelled" <?= $order['status'] == 'Cancelled' ? 'selected' : '' ?>>Cancelled</option>
                   </select>
                   <button type="submit" class="bg-blue-600 text-white px-2 py-1 rounded ml-2">Update</button>
-                </form>
+  <div class="ml-64 flex flex-col flex-1">
               </td>
             </tr>
             <?php endforeach; ?>
@@ -196,7 +185,9 @@ $orders = $stmt->fetchAll();
       document.getElementById('statusModal').classList.add('hidden');
       document.body.classList.remove('overflow-hidden');
     }
-  </script>
+          </div>
+        </div>
+      </form>
 
       <!-- Single Detail Card -->
       <div id="detail-card" class="mt-4 hidden bg-white p-4 rounded shadow border-t">

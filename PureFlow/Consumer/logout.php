@@ -2,10 +2,8 @@
 session_start();
 session_unset();
 session_destroy();
-echo '<script>window.location.replace("../index.html");</script>';
+header('Location: login.php');
 exit;
-exit;
-// ...existing code after exit is unreachable and should be removed...
 ?>
 }
 

@@ -1,57 +1,52 @@
 <?php
 session_start();
-header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
-header("Pragma: no-cache");
-header("Expires: Sat, 1 Jan 2000 00:00:00 GMT");
 include '../db.php';
 
 if (!isset($_SESSION['consumer_id'])) {
-    echo '<script>window.location.replace("../index.html");</script>';
+    header('Location: login.php');
     exit;
 }
 
 $user_id = $_SESSION['consumer_id'];
-$user_name = $_SESSION['consumer_name']; // will update to full_name below
+$user_name = $_SESSION['consumer_name'];
 
 // Fetch current user info
 $stmt = $conn->prepare("SELECT * FROM consumer WHERE consumer_id = ?");
 $stmt->execute([$user_id]);
 $user = $stmt->fetch();
-$user_name = $user['full_name'];
 
 $update_msg = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_account'])) {
-    $new_full_name = trim($_POST['full_name'] ?? '');
+    $new_name = trim($_POST['name'] ?? '');
     $new_email = trim($_POST['email'] ?? '');
-    $new_contact_number = trim($_POST['contact_number'] ?? '');
-    $new_username = trim($_POST['username'] ?? '');
+    $new_phone = trim($_POST['phone'] ?? '');
     $new_password = $_POST['password'] ?? '';
     $confirm_password = $_POST['confirm_password'] ?? '';
 
-    if (!$new_full_name || !$new_email || !$new_contact_number || !$new_username) {
-        $update_msg = "Full name, email, contact number, and username are required.";
+    if (!$new_name || !$new_email || !$new_phone) {
+        $update_msg = "Name, email, and phone are required.";
     } elseif (!filter_var($new_email, FILTER_VALIDATE_EMAIL)) {
         $update_msg = "Invalid email address.";
     } elseif ($new_password && $new_password !== $confirm_password) {
         $update_msg = "Passwords do not match.";
     } else {
-        // Check if email or username is taken by another user
-        $stmt = $conn->prepare("SELECT consumer_id FROM consumer WHERE (email = ? OR username = ?) AND consumer_id != ?");
-        $stmt->execute([$new_email, $new_username, $user_id]);
+        // Check if email is taken by another user
+        $stmt = $conn->prepare("SELECT consumer_id FROM consumer WHERE email = ? AND consumer_id != ?");
+        $stmt->execute([$new_email, $user_id]);
         if ($stmt->fetch()) {
-            $update_msg = "Email or username already in use.";
+            $update_msg = "Email already in use.";
         } else {
             // Update fields
             if ($new_password) {
                 $hashed = password_hash($new_password, PASSWORD_DEFAULT);
-                $stmt = $conn->prepare("UPDATE consumer SET full_name = ?, email = ?, contact_number = ?, username = ?, password = ? WHERE consumer_id = ?");
-                $success = $stmt->execute([$new_full_name, $new_email, $new_contact_number, $new_username, $hashed, $user_id]);
+                $stmt = $conn->prepare("UPDATE consumer SET name = ?, email = ?, phone = ?, password = ? WHERE consumer_id = ?");
+                $success = $stmt->execute([$new_name, $new_email, $new_phone, $hashed, $user_id]);
             } else {
-                $stmt = $conn->prepare("UPDATE consumer SET full_name = ?, email = ?, contact_number = ?, username = ? WHERE consumer_id = ?");
-                $success = $stmt->execute([$new_full_name, $new_email, $new_contact_number, $new_username, $user_id]);
+                $stmt = $conn->prepare("UPDATE consumer SET name = ?, email = ?, phone = ? WHERE consumer_id = ?");
+                $success = $stmt->execute([$new_name, $new_email, $new_phone, $user_id]);
             }
             if ($success) {
-                $_SESSION['consumer_name'] = $new_full_name;
+                $_SESSION['consumer_name'] = $new_name;
                 $update_msg = "Account updated successfully!";
                 // Refresh user info
                 $stmt = $conn->prepare("SELECT * FROM consumer WHERE consumer_id = ?");
@@ -74,11 +69,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_address'])) {
     $address_id = intval($_POST['address_id']);
     $street = trim($_POST['street'] ?? '');
     $city = trim($_POST['city'] ?? '');
-    $region = trim($_POST['region'] ?? '');
+    $province = trim($_POST['province'] ?? '');
     $zip_code = trim($_POST['zip_code'] ?? '');
-    if ($street && $city && $region && $zip_code) {
-        $stmt = $conn->prepare("UPDATE address SET street = ?, city = ?, region = ?, zip_code = ? WHERE address_id = ? AND consumer_id = ?");
-        $stmt->execute([$street, $city, $region, $zip_code, $address_id, $user_id]);
+    if ($street && $city && $province && $zip_code) {
+        $stmt = $conn->prepare("UPDATE address SET street = ?, city = ?, province = ?, zip_code = ? WHERE address_id = ? AND consumer_id = ?");
+        $stmt->execute([$street, $city, $province, $zip_code, $address_id, $user_id]);
         header('Location: account.php');
         exit;
     }
@@ -88,11 +83,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_address'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_address_modal'])) {
     $street = trim($_POST['street'] ?? '');
     $city = trim($_POST['city'] ?? '');
-    $region = trim($_POST['region'] ?? '');
+    $province = trim($_POST['province'] ?? '');
     $zip_code = trim($_POST['zip_code'] ?? '');
-    if ($street && $city && $region && $zip_code) {
-        $stmt = $conn->prepare("INSERT INTO address (consumer_id, street, city, region, zip_code) VALUES (?, ?, ?, ?, ?)");
-        $stmt->execute([$user_id, $street, $city, $region, $zip_code]);
+    if ($street && $city && $province && $zip_code) {
+        $stmt = $conn->prepare("INSERT INTO address (consumer_id, street, city, province, zip_code) VALUES (?, ?, ?, ?, ?)");
+        $stmt->execute([$user_id, $street, $city, $province, $zip_code]);
         header('Location: account.php');
         exit;
     }
@@ -176,20 +171,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
             <form method="POST" class="space-y-4">
               <input type="hidden" name="update_account" value="1">
               <div>
-                <label class="block mb-1 text-sm font-medium">Full Name</label>
-                <input type="text" name="full_name" required class="w-full border px-3 py-2 rounded" value="<?= htmlspecialchars($user['full_name'] ?? '') ?>" placeholder="Full Name *">
+                <label class="block mb-1 text-sm font-medium">Name</label>
+                <input type="text" name="name" required class="w-full border px-3 py-2 rounded" value="<?= htmlspecialchars($user['name'] ?? '') ?>">
               </div>
               <div>
-                <label class="block mb-1 text-sm font-medium">Email Address</label>
-                <input type="email" name="email" required class="w-full border px-3 py-2 rounded" value="<?= htmlspecialchars($user['email'] ?? '') ?>" placeholder="Email Address *">
+                <label class="block mb-1 text-sm font-medium">Email</label>
+                <input type="email" name="email" required class="w-full border px-3 py-2 rounded" value="<?= htmlspecialchars($user['email'] ?? '') ?>">
               </div>
               <div>
-                <label class="block mb-1 text-sm font-medium">Contact Number</label>
-                <input type="text" name="contact_number" required class="w-full border px-3 py-2 rounded" value="<?= htmlspecialchars($user['contact_number'] ?? '') ?>" placeholder="Contact Number *">
-              </div>
-              <div>
-                <label class="block mb-1 text-sm font-medium">Username</label>
-                <input type="text" name="username" required class="w-full border px-3 py-2 rounded" value="<?= htmlspecialchars($user['username'] ?? '') ?>" placeholder="Username *">
+                <label class="block mb-1 text-sm font-medium">Phone Number</label>
+                <input type="text" name="phone" required class="w-full border px-3 py-2 rounded" value="<?= htmlspecialchars($user['phone'] ?? '') ?>">
               </div>
               <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded font-semibold">Save Changes</button>
             </form>
@@ -204,12 +195,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
                     <div>
                       <div class="font-semibold"><?= htmlspecialchars($addr['street']) ?></div>
                       <div class="text-sm text-gray-700">
-                        <?= htmlspecialchars($addr['city']) ?>, <?= htmlspecialchars($addr['region']) ?> <?= htmlspecialchars($addr['zip_code']) ?>
+                        <?= htmlspecialchars($addr['city']) ?>, <?= htmlspecialchars($addr['province']) ?> <?= htmlspecialchars($addr['zip_code']) ?>
                       </div>
                     </div>
                     <button type="button"
                       class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
-                      onclick="openEditAddressModal(<?= $addr['address_id'] ?>, '<?= htmlspecialchars($addr['street'], ENT_QUOTES) ?>', '<?= htmlspecialchars($addr['city'], ENT_QUOTES) ?>', '<?= htmlspecialchars($addr['region'], ENT_QUOTES) ?>', '<?= htmlspecialchars($addr['zip_code'], ENT_QUOTES) ?>')">
+                      onclick="openEditAddressModal(<?= $addr['address_id'] ?>, '<?= htmlspecialchars($addr['street'], ENT_QUOTES) ?>', '<?= htmlspecialchars($addr['city'], ENT_QUOTES) ?>', '<?= htmlspecialchars($addr['province'], ENT_QUOTES) ?>', '<?= htmlspecialchars($addr['zip_code'], ENT_QUOTES) ?>')">
                       Edit
                     </button>
                   </div>
@@ -256,7 +247,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
       <input type="hidden" name="add_address_modal" value="1">
       <input type="text" name="street" placeholder="Street" required class="w-full border px-3 py-2 rounded">
       <input type="text" name="city" placeholder="City" required class="w-full border px-3 py-2 rounded">
-      <input type="text" name="region" placeholder="Region" required class="w-full border px-3 py-2 rounded">
+      <input type="text" name="province" placeholder="Province" required class="w-full border px-3 py-2 rounded">
       <input type="text" name="zip_code" placeholder="Zip Code" required class="w-full border px-3 py-2 rounded">
       <button type="submit" class="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded font-semibold">Add Address</button>
     </form>
@@ -273,7 +264,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
       <input type="hidden" name="address_id" id="edit_address_id">
       <input type="text" name="street" id="edit_street" placeholder="Street" required class="w-full border px-3 py-2 rounded">
       <input type="text" name="city" id="edit_city" placeholder="City" required class="w-full border px-3 py-2 rounded">
-      <input type="text" name="region" id="edit_region" placeholder="Region" required class="w-full border px-3 py-2 rounded">
+      <input type="text" name="province" id="edit_province" placeholder="Province" required class="w-full border px-3 py-2 rounded">
       <input type="text" name="zip_code" id="edit_zip" placeholder="Zip Code" required class="w-full border px-3 py-2 rounded">
       <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded font-semibold">Save Changes</button>
     </form>
@@ -289,11 +280,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
     document.getElementById('addAddressModal').classList.add('hidden');
     document.body.classList.remove('overflow-hidden');
   }
-  function openEditAddressModal(id, street, city, region, zip) {
+  function openEditAddressModal(id, street, city, province, zip) {
     document.getElementById('edit_address_id').value = id;
     document.getElementById('edit_street').value = street;
     document.getElementById('edit_city').value = city;
-    document.getElementById('edit_region').value = region;
+    document.getElementById('edit_province').value = province;
     document.getElementById('edit_zip').value = zip;
     document.getElementById('editAddressModal').classList.remove('hidden');
     document.body.classList.add('overflow-hidden');

@@ -1,16 +1,12 @@
 <?php
 session_start();
-header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
-header("Pragma: no-cache");
-header("Expires: Sat, 1 Jan 2000 00:00:00 GMT");
 include '../db.php';
 
 if (!isset($_SESSION['consumer_id'])) {
-    echo '<script>window.location.replace("../index.html");</script>';
+    header('Location: login.php');
     exit;
 }
 
-// ...existing code...
 $user_id = $_SESSION['consumer_id'];
 $selected_ids = isset($_POST['selected_items']) ? $_POST['selected_items'] : [];
 
@@ -27,17 +23,6 @@ $stmt = $conn->prepare("SELECT * FROM cart WHERE user_id = ? AND cart_id IN ($pl
 $stmt->execute(array_merge([$user_id], $selected_ids));
 $cart_items = $stmt->fetchAll();
 
-// Fetch default address for the logged-in user
-$stmt = $conn->prepare("SELECT * FROM address WHERE consumer_id = ? AND is_default = 1 LIMIT 1");
-$stmt->execute([$user_id]);
-$default_address = $stmt->fetch(PDO::FETCH_ASSOC);
-if (!$default_address) {
-    // fallback: get any address
-    $stmt = $conn->prepare("SELECT * FROM address WHERE consumer_id = ? LIMIT 1");
-    $stmt->execute([$user_id]);
-    $default_address = $stmt->fetch(PDO::FETCH_ASSOC);
-}
-
 $subtotal = 0;
 foreach ($cart_items as $item) {
     $subtotal += $item['qty'] * $item['price'];
@@ -46,43 +31,39 @@ $delivery_fee = 15.00;
 $total = $subtotal + $delivery_fee;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
-    if (!$default_address) {
-        echo '<script>alert("No address found. Please add a shipping address first."); window.location="address.php";</script>';
-        exit;
-    }
-
-    // Assume all items are from the same shop (or use the first item's shop_id)
-    $shop_id = 0;
+    // Place order logic
+    // 1. Create a new order
+    $shop_id = null;
     if (!empty($cart_items)) {
-        // Get shop_id from container table
+        // Get shop_id from the first cart item's container
         $container_id = $cart_items[0]['container_id'];
-        $stmt = $conn->prepare("SELECT shop_id FROM container WHERE container_id = ? LIMIT 1");
+        $stmt = $conn->prepare("SELECT shop_id FROM container WHERE container_id = ?");
         $stmt->execute([$container_id]);
-        $shop = $stmt->fetch(PDO::FETCH_ASSOC);
-        $shop_id = $shop ? $shop['shop_id'] : 0;
+        $shop_id = $stmt->fetchColumn();
     }
+    $order_status = 'Pending';
+    $order_total = $total;
 
-    // Insert order
-    $stmt = $conn->prepare("INSERT INTO orders (consumer_id, shop_id, total_amount, status, order_date) VALUES (?, ?, ?, 'pending', NOW())");
-    $stmt->execute([$user_id, $shop_id, $total]);
+    $stmt = $conn->prepare("INSERT INTO orders (consumer_id, shop_id, status, total_price) VALUES (?, ?, ?, ?)");
+    $stmt->execute([$user_id, $shop_id, $order_status, $order_total]);
     $order_id = $conn->lastInsertId();
 
-    // Insert order items
-    $stmt = $conn->prepare("INSERT INTO order_items (order_id, container_id, quantity, price) VALUES (?, ?, ?, ?)");
+    // 2. Add order items
     foreach ($cart_items as $item) {
+        $stmt = $conn->prepare("INSERT INTO order_items (order_id, container_id, quantity, price) VALUES (?, ?, ?, ?)");
         $stmt->execute([$order_id, $item['container_id'], $item['qty'], $item['price']]);
     }
 
-    // Remove items from cart
+    // 3. Remove items from cart
     $cart_ids = array_column($cart_items, 'cart_id');
-    if (!empty($cart_ids)) {
+    if ($cart_ids) {
         $in = str_repeat('?,', count($cart_ids) - 1) . '?';
         $stmt = $conn->prepare("DELETE FROM cart WHERE cart_id IN ($in) AND user_id = ?");
         $stmt->execute(array_merge($cart_ids, [$user_id]));
     }
 
-    // Redirect to confirmation page
-    header('Location: confirm_order.php?order_id=' . $order_id);
+    // Status is always Pending after placing order
+    header('Location: my_purchases.php');
     exit;
 }
 ?>
@@ -111,22 +92,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
     <div class="grid md:grid-cols-3 gap-6">
       <!-- Shipping Address -->
       <div class="md:col-span-2 bg-white p-6 rounded-lg shadow">
-        <h2 class="text-lg font-semibold mb-4">
-          Shipping Information
-          <?php if ($default_address && isset($default_address['is_default']) && $default_address['is_default'] == 1): ?>
-            <span class="ml-2 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded align-middle">Default</span>
-          <?php endif; ?>
-        </h2>
+        <h2 class="text-lg font-semibold mb-4">Shipping Information</h2>
         <div class="flex items-center justify-between">
           <div>
             <p class="text-gray-700 text-sm mt-1">
-              <?php if ($default_address): ?>
-                <?= htmlspecialchars($default_address['name'] ?? $_SESSION['consumer_name']) ?><br />
-                <?= htmlspecialchars($default_address['contact_number'] ?? '') ?><br />
-                <?= htmlspecialchars($default_address['street'] ?? '') ?><?= !empty($default_address['barangay']) ? ', ' . htmlspecialchars($default_address['barangay']) : '' ?><?= !empty($default_address['city']) ? ', ' . htmlspecialchars($default_address['city']) : '' ?><?= !empty($default_address['region']) ? ', ' . htmlspecialchars($default_address['region']) : '' ?><?= !empty($default_address['zip_code']) ? ', ' . htmlspecialchars($default_address['zip_code']) : '' ?><br />
-              <?php else: ?>
-                <span class="text-gray-500">No address found. Please add one.</span><br />
-              <?php endif; ?>
+              Juan Dela Cruz<br />
+              Tuy, Batangas, Philippines<br />
+              0912-345-6789
             </p>
           </div>
           <a href="address.php" class="text-blue-600 text-sm hover:underline">Change</a>

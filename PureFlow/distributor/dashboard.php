@@ -1,90 +1,138 @@
 <?php
 session_start();
-require '../db.php';
+include '../db.php';
+$currentPage = 'dashboard';
 
-if (!isset($_SESSION['distributor_id'])) {
-    echo '<script>window.location.replace("login.php");</script>';
-    exit;
-}
-
-// Fetch distributor and shop info
-$distributor_id = $_SESSION['distributor_id'];
-$stmt = $conn->prepare("SELECT name FROM distributor WHERE distributor_id = ?");
+// Get distributor info from session or database
+$distributor_id = $_SESSION['distributor_id'] ?? 1;
+$stmt = $conn->prepare("SELECT * FROM distributor WHERE distributor_id = ?");
 $stmt->execute([$distributor_id]);
-$distributor = $stmt->fetch(PDO::FETCH_ASSOC);
-$_SESSION['distributor_name'] = $distributor['name'] ?? '';
+$distributor = $stmt->fetch();
 
-$shopStmt = $conn->prepare("SELECT name FROM shop WHERE distributor_id = ?");
-$shopStmt->execute([$distributor_id]);
-$shop = $shopStmt->fetch(PDO::FETCH_ASSOC);
-$_SESSION['shop_name'] = $shop ? $shop['name'] : '';
+$username = $distributor['name'] ?? "Juan Dela Cruz";
+$shopname = $_SESSION['shop_name'] ?? "Tuy Aqua Station";
+$profilePic = "images/profile.jpg"; // Placeholder
+
+include 'sidebar.php';
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Distributor Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
-<body class="bg-gray-100 min-h-screen flex">
+<body class="flex bg-gray-100">
+
+  <!-- Sidebar -->
   <?php include 'sidebar.php'; ?>
-  <div class="flex-1 ml-64 min-h-screen flex flex-col">
-    <!-- HEADER: Place OUTSIDE the main content, full width -->
-    <header class="bg-white shadow px-8 py-4 flex justify-between items-center w-full">
-      <div class="flex items-center gap-2">
-        <span class="text-2xl font-bold text-blue-700">Tuy PureFlow</span>
-        <span class="ml-4 text-gray-700">
-          Hello, 
-          <span class="text-blue-700 font-semibold">
-            <?= htmlspecialchars($_SESSION['distributor_name']) ?>
-            <?php if (!empty($_SESSION['shop_name'])): ?>
-              of <?= htmlspecialchars($_SESSION['shop_name']) ?>
-            <?php endif; ?>
-          </span>
-        </span>
-      </div>
-      <div class="flex items-center gap-4">
-        <div class="relative">
-          <span class="material-icons text-blue-700" style="font-size: 28px;">notifications</span>
-          <span class="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full px-2">3</span>
+
+  <!-- Main Content -->
+  <div class="ml-64 flex flex-col flex-1">
+
+    <!-- Header -->
+    <?php include 'header.php'; ?>
+
+    <!-- Dashboard Content -->
+    <main class="p-6">
+      <h1 class="text-2xl font-semibold text-gray-700 mb-6">Dashboard Overview</h1>
+
+<!-- Top Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white p-4 rounded-lg shadow">
+          <div class="flex justify-between">
+            <div>
+              <h3 class="text-sm text-gray-500">Orders</h3>
+              <p class="text-xl font-bold">1,456</p>
+              <p class="text-green-500 text-sm">↑ 6.7% Since last week</p>
+            </div>
+            <span class="text-2xl">🛒</span>
+          </div>
         </div>
-        <img src="../assets/profile.png" alt="Profile" class="w-8 h-8 rounded-full border object-cover">
-        <span class="font-medium text-blue-700"><?= htmlspecialchars($_SESSION['distributor_name']) ?></span>
-        <a href="logout.php" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium">Logout</a>
+        <div class="bg-white p-4 rounded-lg shadow">
+          <div class="flex justify-between">
+            <div>
+              <h3 class="text-sm text-gray-500">Loans</h3>
+          <p class="text-xl font-bold">₱2,000</p>
+              <p class="text-green-500 text-sm">↑ 3.1% Since last week</p>
+            </div>
+            <span class="text-2xl">👥</span>
+          </div>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow">
+          <div class="flex justify-between">
+            <div>
+              <h3 class="text-sm text-gray-500">Estimated Sale</h3>
+              <p class="text-xl font-bold">₱23,456</p>
+              <p class="text-green-500 text-sm">↑ 1.1% Since last month</p>
+            </div>
+            <span class="text-2xl">📈</span>
+          </div>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow">
+          <div class="flex justify-between">
+            <div>
+              <h3 class="text-sm text-gray-500">Revenue Today</h3>
+              <p class="text-xl font-bold">₱838</p>
+              <p class="text-green-500 text-sm">↑ 1.1% Since yesterday</p>
+            </div>
+            <span class="text-2xl">📊</span>
+          </div>
+          </div>
+        </div>
+
+        <!-- Charts Section -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <div class="bg-white p-4 rounded-lg shadow">
+          <h3 class="text-lg font-semibold mb-2">Delivery Breakdown</h3>
+          <div class="w-full h-56 flex items-center justify-center bg-gray-100 text-gray-500">Pie Chart Placeholder</div>
+            </div>
+        <div class="bg-white p-4 rounded-lg shadow">
+          <h3 class="text-lg font-semibold mb-2">Total Sales</h3>
+          <div class="w-full h-56 flex items-center justify-center bg-gray-100 text-gray-500">Line Chart Placeholder</div>
+          </div>
+        </div>
+
+        <!-- Bottom Info Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white p-4 rounded-lg shadow text-center">
+          <p class="text-sm text-gray-500">On-Going Delivery</p>
+          <p class="text-xl font-bold">2</p>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow text-center">
+          <p class="text-sm text-gray-500">Available Rider</p>
+          <p class="text-xl font-bold">0</p>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow text-center">
+          <p class="text-sm text-gray-500">Customer Complaint</p>
+          <p class="text-xl font-bold">0</p>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow text-center">
+          <p class="text-sm text-gray-500">Damaged Containers</p>
+          <p class="text-xl font-bold">4          </p>
+        </div>
       </div>
-    </header>
-    <!-- MAIN CONTENT -->
-    <main class="p-8">
-      <h2 class="text-2xl font-bold mb-6 text-blue-700">Order Management</h2>
-      <div class="bg-white rounded shadow p-6">
-        <table class="min-w-full border rounded mb-4">
-          <thead class="bg-blue-100">
-            <tr>
-              <th class="py-2 px-4 border-b">Order ID</th>
-              <th class="py-2 px-4 border-b">Customer Name</th>
-              <th class="py-2 px-4 border-b">Phone Number</th>
-              <th class="py-2 px-4 border-b">Email</th>
-              <th class="py-2 px-4 border-b">Address</th>
-              <th class="py-2 px-4 border-b">Status</th>
-              <th class="py-2 px-4 border-b">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Table rows go here -->
-          </tbody>
-        </table>
-        <div class="mb-4">
-          <h3 class="font-semibold mb-2">Bulk Actions</h3>
-          <div class="flex gap-2">
-            <select class="border rounded px-2 py-1">
-              <option>Change Status</option>
-            </select>
-            <button class="bg-blue-600 text-white px-4 py-2 rounded">Apply Changes</button>
+
+      <!-- Container Count -->
+      <div class="bg-white p-4 rounded-lg shadow">
+        <h3 class="text-lg font-semibold mb-4">Remaining Containers</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="text-center border-r md:border-r border-gray-200">
+            <p class="text-sm text-gray-500">Container 1</p>
+            <p class="text-2xl font-bold">45</p>
+          </div>
+          <div class="text-center">
+            <p class="text-sm text-gray-500">Container 2</p>
+            <p class="text-2xl font-bold">30</p>
           </div>
         </div>
       </div>
+
     </main>
+
   </div>
+
 </body>
 </html>
