@@ -46,6 +46,7 @@ Overall Description
 
 SYSTEM ARCHITECTURE: 
 <img width="904" height="551" alt="image" src="https://github.com/user-attachments/assets/d4bdd813-7ee8-4de1-8b39-b8a45849b769" />
+
 Discuss system architecture:
 
 The Tuy PureFlow system architecture is a hybrid platform combining both web and mobile applications to support purified water delivery services in Tuy, Batangas. It follows a client-server architecture, where the client-side (consumers via mobile app; distributors/admin via web app) communicates with a centralized backend API and database server hosted on the cloud.
@@ -87,12 +88,19 @@ Key System Functions: Real-time order placement and tracking
     Report generation and analytics
 
 Add use case characteristics and other diagrams
+
 USE CASE:
+
 <img width="904" height="814" alt="image" src="https://github.com/user-attachments/assets/7779fd59-7a00-421a-af93-776fe308167a" />
+
 CONTEXT DIAGRAM:
+
 <img width="904" height="553" alt="image" src="https://github.com/user-attachments/assets/26c4dc7d-6770-4887-887f-f4ad90520eee" />
+
 DATA FLOW DIAGRAM:
+
 <img width="908" height="590" alt="image" src="https://github.com/user-attachments/assets/1be37ebb-d543-420a-9359-65812639449f" />
+
 Constraints, limitation and dependencies
 
 Constraints:
