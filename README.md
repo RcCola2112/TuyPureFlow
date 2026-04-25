@@ -2,7 +2,9 @@ TUY PUREFLOW: DIGITAL PLATFORM FOR PURIFIED WATER DELIVERY AND DEMAND ANALYTICS 
 
 Members:
 
-Alcaraz, Vince Albert D. Ferrer, Christel Jhoy E. Roxas, John Rc Denver M.
+Alcaraz, Vince Albert D. 
+Ferrer, Christel Jhoy E. 
+Roxas, John Rc Denver M.
 
 Introduction/Summary
 
